@@ -6,6 +6,7 @@ from doc import Document
 from view import View
 from screen import Screen
 from window import Window
+from wm import WindowManager
 from utils import ExitException
 import config
 import traceback
@@ -18,6 +19,7 @@ class Application(Screen):
         self.menu_bar = Menu('')
         self.shortcuts = {}
         self.views = []
+        self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height()-2))
         self.focus = None
         self.terminating = False
 
@@ -36,6 +38,7 @@ class Application(Screen):
 
     def render(self):
         self.draw_menu_bar()
+        self.draw_status_bar()
         for view in self.views:
             if view is not self.focus:
                 view.render()
@@ -103,6 +106,10 @@ class Application(Screen):
                     char_color = color
             self.write('] ', color)
 
+    def draw_status_bar(self):
+        self.move((0, self.height() - 1))
+        self.write('\u2592' * (self.width() - 1), 0)
+
 
 def message_box(text):
     pass
@@ -116,7 +123,9 @@ def main():
         filename = sys.argv[1]
     doc = Document(filename)
     doc.load(filename)
-    view = View(Window(app, Rect(3, 3, app.width() - 5, app.height() - 5)), doc)
+    w = Window(Point(app.width(), app.height()))
+    app.window_manager.add_window(w)
+    view = View(w, doc)
     app.set_menu(create_menu())
     app.add_view(view)
     app.render()

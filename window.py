@@ -1,28 +1,43 @@
-from screen import Screen
 from geom import Rect, Point
+from config import get_app
 
 
 class Window:
-    def __init__(self, screen: Screen, rect: Rect):
-        self.screen = screen
-        self.rect = rect
+    def __init__(self, size_preference: Point):
+        self.rect = Rect(0, 0, 5, 5)
         self.color = 0
+        self.size_preference = size_preference
+        self.border = True
+
+    def set_rect(self, rect: Rect):
+        self.rect = rect
 
     def clear(self):
-        self.screen.fill_rect(self.rect, ' ', 0)
+        get_app().fill_rect(self.rect, ' ', 0)
 
     def width(self):
-        return self.rect.width()
+        w = self.rect.width()
+        return w - 2 if self.border else w
 
     def height(self):
-        return self.rect.height()
+        h = self.rect.height()
+        return h - 2 if self.border else h
+
+    def requested_size(self):
+        return self.size_preference
 
     def set_cursor(self, *args):
         p = Point(*args)
-        self.screen.move(self.rect.tl + p)
+        if self.border:
+            p = p + Point(1, 1)
+        get_app().move(self.rect.pos + p)
 
     def set_color(self, color):
         self.color = color
 
     def text(self, s):
-        self.screen.write(s, self.color)
+        get_app().write(s, self.color)
+
+    def render(self):
+        if self.border:
+            get_app().draw_frame(self.rect, 0)

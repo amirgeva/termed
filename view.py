@@ -236,12 +236,13 @@ class View:
             self.window.text(' ' * (self.width() - cx))
 
     def redraw_all(self):
-        self.window.clear()
+        # self.window.clear()
         for y in range(self.height()):
             self.draw_line(y)
         self.window.set_cursor(self.doc2win(self.cursor))
 
     def render(self):
+        self.window.render()
         self.redraw_all()
 
     def scroll_display(self):

@@ -1,4 +1,4 @@
-from geom import Point, Rect, tlwh
+from geom import Point, Rect
 from config import get_app
 
 
@@ -97,9 +97,9 @@ class Menu(object):
     def erase(self):
         screen = get_app()
         h = len(self.items) + 3
-        r = tlwh(self.pos.x, self.pos.y, self.width, h)
-        y = r.tl.y
-        while y <= r.br.y:
+        r = Rect(self.pos.x, self.pos.y, self.width, h)
+        y = r.pos.y
+        while y <= r.right():
             screen.move((self.pos.x, y))
             screen.write(' ' * r.width(), 0)
             y = y + 1
@@ -109,7 +109,7 @@ class Menu(object):
         screen.cursor(False)
         pos = self.pos + Point(1, 0)
         h = len(self.items) + 3
-        screen.draw_frame(tlwh(self.pos.x, self.pos.y, self.width, h), 4)
+        screen.draw_frame(Rect(self.pos.x, self.pos.y, self.width, h), 4)
         index = 0
         for item in self.items:
             color = 4

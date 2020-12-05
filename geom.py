@@ -118,41 +118,47 @@ class Range:
 class Rect(object):
     def __init__(self, *args):
         if len(args) == 2 and isinstance(args[0], Point) and isinstance(args[1], Point):
-            self.tl = Point(args[0])
-            self.br = Point(args[1])
+            self.pos = Point(args[0])
+            self.size = Point(args[1])
         elif len(args) == 4:
-            self.tl = Point(args[0], args[1])
-            self.br = Point(args[2], args[3])
+            self.pos = Point(args[0], args[1])
+            self.size = Point(args[2], args[3])
         elif len(args) == 1 and isinstance(args[0], Rect):
-            self.tl = Point(args[0].tl)
-            self.br = Point(args[0].br)
+            self.pos = Point(args[0].pos)
+            self.size = Point(args[0].size)
         else:
             raise TypeError()
 
-    def normalized(self):
-        return Rect(min(self.tl.x, self.br.x), min(self.tl.y, self.br.y),
-                    max(self.tl.x, self.br.x), max(self.tl.y, self.br.y))
+    def clone(self):
+        return Rect(self)
+
+    def move(self, delta: Point):
+        self.pos += delta
 
     def width(self):
-        return self.br.x - self.tl.x
+        return self.size.x
 
     def height(self):
-        return self.br.y - self.tl.y
+        return self.size.y
+
+    def right(self):
+        return self.pos.x + self.size.x
+
+    def bottom(self):
+        return self.pos.y + self.size.y
 
     def inflate(self, d):
         if isinstance(d, Point):
-            self.tl -= d
-            self.br += d
+            self.pos -= d
+            self.size += 2 * d
         else:
-            self.tl -= Point(d, d)
-            self.br += Point(d, d)
+            self.pos -= Point(d, d)
+            self.size += Point(2 * d, 2 * d)
         return self
 
     def is_point_inside(self, p):
         if not isinstance(p, Point):
             p = Point(p)
-        return self.br.x > p.x >= self.tl.x and self.br.y > p.y >= self.tl.y
+        p -= self.pos
+        return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
 
-
-def tlwh(x, y, w, h):
-    return Rect(x, y, x + w - 1, y + h - 1)

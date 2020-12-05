@@ -1,5 +1,4 @@
 import sys
-import os
 import curses
 import config
 from geom import Rect, Point
@@ -32,6 +31,7 @@ class Screen:
                          config.get_int('bg6', curses.COLOR_BLUE))
         curses.init_pair(7, config.get_int('fg7', curses.COLOR_WHITE),
                          config.get_int('bg7', curses.COLOR_RED))
+        self.box = '\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b'
         sys.stdout.write('\033]12;yellow\007')
         self.keylog = None
         self.dbg = open('screen.log', 'w')
@@ -50,7 +50,8 @@ class Screen:
             return True
         return False
 
-    def cursor(self, state):
+    @staticmethod
+    def cursor(state):
         curses.curs_set(1 if state else 0)
 
     def write(self, text, color):
@@ -69,7 +70,7 @@ class Screen:
             pass
 
     def fill_rect(self, rect, c, clr):
-        self.fill(rect.tl.x, rect.tl.y, rect.width(), rect.height(), c, clr)
+        self.fill(rect.pos.x, rect.pos.y, rect.width(), rect.height(), c, clr)
 
     def fill(self, x0, y0, w, h, c, clr):
         for y in range(y0, y0 + h):
@@ -77,21 +78,21 @@ class Screen:
             self.write(c * w, clr)
 
     def draw_frame(self, rect, color):
-        self.move(rect.tl)
-        self.write(curses.ACS_ULCORNER, color)
-        for i in range(0, rect.width() - 2):
-            self.write(curses.ACS_HLINE, color)
-        self.write(curses.ACS_URCORNER, color)
-        for y in range(rect.tl.y + 1, rect.br.y):
-            self.move(Point(rect.tl.x, y))
-            self.write(curses.ACS_VLINE, color)
-            self.move(Point(rect.br.x - 1, y))
-            self.write(curses.ACS_VLINE, color)
-        self.move(Point(rect.tl.x, rect.br.y - 1))
-        self.write(curses.ACS_LLCORNER, color)
-        for i in range(0, rect.width() - 2):
-            self.write(curses.ACS_HLINE, color)
-        self.write(curses.ACS_LRCORNER, color)
+        self.move(rect.pos)
+        self.write(self.box[0], color)
+        for i in range(rect.width() - 2):
+            self.write(self.box[1], color)
+        self.write(self.box[2], color)
+        for y in range(rect.pos.y + 1, rect.bottom() - 1):
+            self.move(Point(rect.pos.x, y))
+            self.write(self.box[3], color)
+            self.move(Point(rect.right() - 1, y))
+            self.write(self.box[5], color)
+        self.move(Point(rect.pos.x, rect.bottom() - 1))
+        self.write(self.box[6], color)
+        for i in range(rect.width() - 2):
+            self.write(self.box[7], color)
+        self.write(self.box[8], color)
 
     def refresh(self):
         self.scr.refresh()
@@ -106,12 +107,6 @@ class Screen:
                 self.scr.nodelay(False)
         except curses.error:
             key = 'ESC'
-        if False:
-            if key == 'KEY_F(24)':  # For debugging purposes
-                self.keylog = open('/tmp/key.log', 'w')
-            if self.keylog is not None:
-                self.keylog.write('{}   {}\n'.format(key, hex(ord(key[0]))))
-                self.keylog.flush()
         return key
 
     def close(self):

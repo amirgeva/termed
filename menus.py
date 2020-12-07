@@ -1,6 +1,6 @@
 from geom import Point, Rect
 from config import get_app
-
+from focus import FocusTarget
 
 # from screen import Screen
 
@@ -23,8 +23,9 @@ class MenuItem(object):
                     f()
 
 
-class Menu(object):
+class Menu(FocusTarget):
     def __init__(self, title, parent=None):
+        super().__init__()
         self.title = title
         self.parent = parent
         self.pos = Point(0, 0)
@@ -45,7 +46,7 @@ class Menu(object):
         else:
             raise TypeError()
         self.items.append(item)
-        self.width = max(self.width, 3 + len(item.title) - item.title.count('&'))
+        self.width = max(self.width, 2 + len(item.title) - item.title.count('&'))
 
     def on_key(self, key):
         for item in self.items:
@@ -108,7 +109,7 @@ class Menu(object):
         screen = get_app()
         screen.cursor(False)
         pos = self.pos + Point(1, 0)
-        h = len(self.items) + 3
+        h = len(self.items) + 2
         screen.draw_frame(Rect(self.pos.x, self.pos.y, self.width, h), 4)
         index = 0
         for item in self.items:

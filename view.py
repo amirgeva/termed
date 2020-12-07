@@ -4,10 +4,12 @@ from cursor import Cursor
 from text_token import Token
 import config
 from geom import Point, Range
+from focus import FocusTarget
 
 
-class View:
+class View(FocusTarget):
     def __init__(self, window, doc=None):
+        super().__init__()
         self.window = window
         self.doc = doc
         self.visual_offset = Point(0, 0)
@@ -218,6 +220,9 @@ class View:
     def draw_line(self, y: int):
         line_index = y + self.visual_offset.y
         if line_index >= self.doc.size():
+            self.window.set_color(0)
+            self.window.set_cursor(0, y)
+            self.window.text(' ' * self.window.width())
             return
         line = self.doc[line_index]
         tokens = [t.clone() for t in line.tokens]
@@ -246,7 +251,10 @@ class View:
         self.redraw_all()
 
     def scroll_display(self):
-        pass
+        x, y = self.doc2win(self.cursor)
+        cx, cy = self.window.contains((x, y))
+        if not cy:
+            self.visual_offset.y = max(0, self.cursor.y - self.window.height() // 2)
 
     def delete_selection(self):
         if self.selection is not None:

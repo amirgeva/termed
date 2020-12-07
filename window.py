@@ -9,6 +9,11 @@ class Window:
         self.size_preference = size_preference
         self.border = True
 
+    def contains(self, p):
+        if not isinstance(p, Point):
+            p = Point(p)
+        return 0 <= p.x < self.width(), 0 <= p.y < self.height()
+
     def set_rect(self, rect: Rect):
         self.rect = rect
 

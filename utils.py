@@ -32,3 +32,11 @@ def center_rect(size: Point):
     sh = get_app().height()
     w, h = size.x, size.y
     return Rect((sw - w) // 2, (sh - h) // 2, w, h)
+
+
+def fit_text(text, width):
+    if len(text) > width:
+        return text[0:width]
+    if len(text) < width:
+        return text + ' ' * (width - len(text))
+    return text

@@ -58,6 +58,12 @@ class Window:
         if self.border:
             get_app().draw_frame(self.rect, 0)
 
+    def render_title(self, title):
+        if self.border:
+            app = get_app()
+            app.move(self.rect.pos + Point(1, 0))
+            app.write(title, 0)
+
     def subwindow(self, rect: Rect):
         rect.move(self.rect.top_left())
         return Window(rect)

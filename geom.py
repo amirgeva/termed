@@ -147,6 +147,9 @@ class Rect(object):
     def bottom(self):
         return self.pos.y + self.size.y
 
+    def top_left(self):
+        return self.pos
+
     def inflate(self, d):
         if isinstance(d, Point):
             self.pos -= d

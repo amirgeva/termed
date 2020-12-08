@@ -163,6 +163,7 @@ def create_menu():
                        ]),
             ('&Options', [('&Colors', app, 'on_colors'),
                           ('&Editor', app, 'on_cfg_editor'),
+                          ('&Key Mapping', app, 'on_keymap_dialog')
                           ]),
             ('&Help', [('&About', app, 'on_help_about'),
                        ]),

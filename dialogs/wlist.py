@@ -1,4 +1,4 @@
-from widget import Widget
+from dialogs.widget import Widget
 # from config import get_app
 
 

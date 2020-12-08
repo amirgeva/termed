@@ -10,6 +10,7 @@ from wm import WindowManager
 # from utils import ExitException
 import config
 import traceback
+from dialogs.keymap_dialog import KeymapDialog
 
 
 class Application(Screen):
@@ -19,7 +20,7 @@ class Application(Screen):
         self.menu_bar = Menu('')
         self.shortcuts = {}
         self.views = []
-        self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height()-2))
+        self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
         self.focus = None
         self.terminating = False
 
@@ -113,6 +114,9 @@ class Application(Screen):
     def draw_status_bar(self):
         self.move((0, self.height() - 1))
         self.write('\u2592' * (self.width() - 1), 0)
+
+    def on_keymap_dialog(self):
+        self.focus = KeymapDialog()
 
 
 def message_box(text):

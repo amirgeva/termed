@@ -3,10 +3,21 @@ from config import get_app
 
 
 class Window:
-    def __init__(self, size_preference: Point):
-        self.rect = Rect(0, 0, 5, 5)
+    def __init__(self, *args):
+        if len(args) == 1:
+            if isinstance(args[0], Point):
+                self.size_preference = Point(args[0])
+                self.rect = Rect(0, 0, args[0].x, args[0].y)
+            elif isinstance(args[0], Rect):
+                self.rect = args[0]
+                self.size_preference = Point(self.rect.size)
+            else:
+                self.rect = Rect(0, 0, 5, 5)
+                self.size_preference = Point(5, 5)
+        else:
+            self.rect = Rect(0, 0, 5, 5)
+            self.size_preference = Point(5, 5)
         self.color = 0
-        self.size_preference = size_preference
         self.border = True
 
     def contains(self, p):
@@ -46,3 +57,7 @@ class Window:
     def render(self):
         if self.border:
             get_app().draw_frame(self.rect, 0)
+
+    def subwindow(self, rect: Rect):
+        rect.move(self.rect.top_left())
+        return Window(rect)

@@ -1,3 +1,6 @@
+from geom import Point, Rect
+
+
 class ExitException(Exception):
     pass
 
@@ -21,3 +24,11 @@ def align(s, n):
 
 def ctrl(key):
     return chr(ord(key) - ord('A') + 1)
+
+
+def center_rect(size: Point):
+    from config import get_app
+    sw = get_app().width()
+    sh = get_app().height()
+    w, h = size.x, size.y
+    return Rect((sw - w) // 2, (sh - h) // 2, w, h)

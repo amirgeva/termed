@@ -7,7 +7,7 @@ from view import View
 from screen import Screen
 from window import Window
 from wm import WindowManager
-from utils import ExitException
+# from utils import ExitException
 import config
 import traceback
 
@@ -67,10 +67,14 @@ class Application(Screen):
             return True
         if self.focus is not None:
             if key in config.keymap:
+                flags: int
                 action, flags = config.keymap.get(key)
                 if hasattr(self.focus, action):
                     func = getattr(self.focus, action)
                     func(flags)
+                elif hasattr(self.focus, 'on_action'):
+                    func = getattr(self.focus, 'on_action')
+                    func(action, flags)
             else:
                 if hasattr(self.focus, 'process_key'):
                     self.focus.process_key(key)

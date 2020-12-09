@@ -14,39 +14,43 @@ def get_app():
 
 def generate_default_keymap(path: str):
     mapping = {
-        'KEY_LEFT': ['move_left', 0],
-        'KEY_RIGHT': ['move_right', 0],
-        'KEY_DOWN': ['move_down', 0],
-        'KEY_UP': ['move_up', 0],
-        'KEY_PPAGE': ['move_pgup', 0],
-        'KEY_NPAGE': ['move_pgdn', 0],
-        'KEY_HOME': ['move_home', 0],
-        'KEY_END': ['move_end', 0],
-        'kLFT5': ['move_word_left', 0],
-        'kRIT5': ['move_word_right', 0],
+        'KEY_LEFT': 'move_left',
+        'KEY_RIGHT': 'move_right',
+        'KEY_DOWN': 'move_down',
+        'KEY_UP': 'move_up',
+        'KEY_PPAGE': 'move_pgup',
+        'KEY_NPAGE': 'move_pgdn',
+        'KEY_HOME': 'move_home',
+        'KEY_END': 'move_end',
+        'kLFT5': 'move_word_left',
+        'kRIT5': 'move_word_right',
+        'KEY_BTAB': 'backtab',
 
-        'KEY_SLEFT': ['move_left', SHIFTED],
-        'KEY_SRIGHT': ['move_right', SHIFTED],
-        'KEY_SF': ['move_down', SHIFTED],
-        'KEY_SR': ['move_up', SHIFTED],
-        'KEY_SPREVIOUS': ['move_pgup', SHIFTED],
-        'KEY_SNEXT': ['move_pgdn', SHIFTED],
-        'KEY_SHOME': ['move_home', SHIFTED],
-        'KEY_SEND': ['move_end', SHIFTED],
-        'kLFT6': ['move_word_left', SHIFTED],
-        'kRIT6': ['move_word_right', SHIFTED],
+        'KEY_SLEFT': 'select_left',
+        'KEY_SRIGHT': 'select_right',
+        'KEY_SF': 'select_down',
+        'KEY_SR': 'select_up',
+        'KEY_SPREVIOUS': 'select_pgup',
+        'KEY_SNEXT': 'select_pgdn',
+        'KEY_SHOME': 'select_home',
+        'KEY_SEND': 'select_end',
+        'kLFT6': 'select_word_left',
+        'kRIT6': 'select_word_right',
 
-        ctrl('C'): ['copy', 0],
-        ctrl('F'): ['find', 0],
-        ctrl('X'): ['cut', 0],
-        ctrl('V'): ['paste', 0],
-        ctrl('N'): ['new_file', 0],
-        ctrl('S'): ['save_file', 0],
-        ctrl('O'): ['open_file', 0],
-        ctrl('Q'): ['quit', 0],
-        ctrl('R'): ['record_macro', 0],
-        ctrl('P'): ['play_macro', 0],
-        ctrl('Z'): ['undo', 0],
+        ctrl('C'): 'copy',
+        ctrl('F'): 'find',
+        ctrl('X'): 'cut',
+        ctrl('V'): 'paste',
+        ctrl('N'): 'new_file',
+        ctrl('S'): 'save_file',
+        ctrl('O'): 'open_file',
+        ctrl('Q'): 'quit',
+        ctrl('R'): 'record_macro',
+        ctrl('P'): 'play_macro',
+        ctrl('Z'): 'undo',
+
+        '\t': 'tab',
+        '\n': 'enter'
     }
     with open(path, 'w') as fo:
         json.dump(mapping, fo, indent=4)
@@ -106,3 +110,20 @@ else:
 atexit.register(save_cfg)
 
 const = Constants()
+
+
+def assign_key(key, action):
+    keymap[key] = action
+
+
+def save_keymap():
+    with open(keymap_path, 'w') as fo:
+        json.dump(keymap, fo, indent=4)
+
+
+def get_assigned_key(action):
+    for key in sorted(keymap.keys()):
+        key_action = keymap.get(key)
+        if action == key_action:
+            return key
+    return ''

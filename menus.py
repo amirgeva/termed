@@ -55,20 +55,21 @@ class Menu(FocusTarget):
                 return True
         return False
 
-    def enter(self, flags):
+    def action_enter(self):
         item = self.items[self.cur]
         if isinstance(item, MenuItem):
+            get_app().close_menu()
             item.activate()
 
-    def move_left(self, flags):
+    def action_move_left(self):
         if self.parent:
-            self.parent.move_up(flags)
+            self.parent.action_move_up()
 
-    def move_right(self, flags):
+    def action_move_right(self):
         if self.parent:
-            self.parent.move_down(flags)
+            self.parent.action_move_down()
 
-    def move_up(self, flags):
+    def action_move_up(self):
         if isinstance(self.items[self.cur], Menu):
             self.items[self.cur].erase()
         self.cur = self.cur - 1
@@ -77,7 +78,7 @@ class Menu(FocusTarget):
         if isinstance(self.items[self.cur], Menu):
             get_app().set_focus(self.items[self.cur])
 
-    def move_down(self, flags):
+    def action_move_down(self):
         if isinstance(self.items[self.cur], Menu):
             self.items[self.cur].erase()
         self.cur = self.cur + 1

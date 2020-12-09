@@ -5,48 +5,59 @@ from dialogs.widget import Widget
 class Dialog(FocusTarget):
     def __init__(self, win):
         super().__init__()
-        self.window = win
-        self.widgets = []
-        self.focus: Widget
-        self.focus = None
+        self._window = win
+        self._widgets = []
+        self._focus: Widget
+        self._focus = None
 
     def add_widget(self, w: Widget):
-        self.widgets.append(w)
+        self._widgets.append(w)
         w.set_parent(self)
-        if self.focus is None:
-            self.focus = w
+        if self._focus is None:
+            self._focus = w
+            self._focus.on_focus()
 
     def render(self):
-        self.window.render()
-        for w in self.widgets:
-            if w is not self.focus:
+        self._window.clear()
+        self._window.render()
+        for w in self._widgets:
+            if w is not self._focus:
                 w.render()
-        if self.focus is not None:
-            self.focus.render()
+        if self._focus is not None:
+            self._focus.render()
+
+    @property
+    def focus(self):
+        return self._focus
 
     def change_focus(self, d):
-        if self.focus is None:
+        if self._focus is None:
             return
         try:
-            i = self.widgets.index(self.focus)
-            self.focus.on_leave_focus()
-            i = (i + d) % len(self.widgets)
-            self.focus = self.widgets[i]
-            self.focus.on_focus()
+            i = self._widgets.index(self._focus)
+            self._focus.on_leave_focus()
+            i = (i + d) % len(self._widgets)
+            self._focus = self._widgets[i]
+            self._focus.on_focus()
         except ValueError:
             pass
 
-    def on_action(self, action, flags):
-        if self.focus is not None:
+    def on_action(self, action):
+        func_name = f'action_{action}'
+        if self._focus is not None:
             if action == 'tab':
                 self.change_focus(1)
-            elif action == 'btab':
+            elif action == 'backtab':
                 self.change_focus(-1)
             else:
-                if hasattr(self.focus, action):
-                    f = getattr(self.focus, action)
-                    f(flags)
+                if hasattr(self._focus, func_name):
+                    f = getattr(self._focus, func_name)
+                    f()
 
     def process_key(self, key):
-        if self.focus is not None and hasattr(self.focus, 'process_key'):
-            self.focus.process_key(key)
+        if self._focus is not None and hasattr(self._focus, 'process_key'):
+            self._focus.process_key(key)
+
+    def ll_key(self, key):
+        if self._focus is not None and hasattr(self._focus, 'll_key') and key != '\t':
+            self._focus.ll_key(key)

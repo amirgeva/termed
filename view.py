@@ -5,6 +5,7 @@ from text_token import Token
 import config
 from geom import Point, Range
 from focus import FocusTarget
+import pyperclip
 
 
 class View(FocusTarget):
@@ -76,7 +77,7 @@ class View(FocusTarget):
         self.draw_cursor_line()
         self.place_cursor()
 
-    def backtab(self, flags):
+    def action_backtab(self):
         if self.selection is not None:
             y0 = self.selection.start.y
             if self.selection.start.x >= self.doc[y0].size():
@@ -90,7 +91,7 @@ class View(FocusTarget):
                     line.set_text(line.text[1:])
                 y0 = y0 + 1
 
-    def tab(self, flags):
+    def action_tab(self):
         if self.selection is not None:
             y0 = self.selection.start.y
             if self.selection.start.x >= self.doc[y0].size():
@@ -104,14 +105,14 @@ class View(FocusTarget):
         else:
             self.insert_text('\t')
 
-    def enter(self, flags):
+    def action_enter(self):
         line = self.doc[self.cursor.y]
         line = line.split(self.cursor.x)
         self.doc.insert(line, self.cursor.y + 1)
         self.cursor = Cursor(0, self.cursor.y + 1)
         self.redraw_all()
 
-    def delete(self, flags):
+    def action_delete(self):
         line = self.doc[self.cursor.y]
         if self.cursor.x < line.size():
             line.delete_char(self.cursor.x)
@@ -122,7 +123,7 @@ class View(FocusTarget):
             self.doc.delete_line(self.cursor.y + 1)
             self.redraw_all()
 
-    def backspace(self, flags):
+    def action_backspace(self):
         line = self.doc[self.cursor.y]
         if self.cursor.x > 0:
             line.delete_char(self.cursor.x - 1)
@@ -184,18 +185,18 @@ class View(FocusTarget):
                         i = i + 1
                     elif from_i > t_start:
                         n = from_i - t_start
-                        next = Token(token.text[n:], token.visual_index + n, token.text_index + n)
-                        next.color = 1
+                        next_token = Token(token.text[n:], token.visual_index + n, token.text_index + n)
+                        next_token.color = 1
                         token.text = token.text[0:n]
-                        tokens.insert(i + 1, next)
+                        tokens.insert(i + 1, next_token)
                         i = i + 1
                     else:
                         n = to_i - t_start
-                        next = Token(token.text[n:], token.visual_index + n, token.text_index + n)
-                        next.color = token.color
+                        next_token = Token(token.text[n:], token.visual_index + n, token.text_index + n)
+                        next_token.color = token.color
                         token.text = token.text[0:n]
                         token.color = sel_highlight
-                        tokens.insert(i + 1, next)
+                        tokens.insert(i + 1, next_token)
                         i = i + 1
 
     def clamp_tokens(self, tokens: List[Token]):
@@ -256,6 +257,21 @@ class View(FocusTarget):
         if not cy:
             self.visual_offset.y = max(0, self.cursor.y - self.window.height() // 2)
 
+    def get_selection_text(self):
+        if self.selection is None:
+            return ''
+        start, stop = self.selection.get_ordered()
+        x = start.x
+        lines = []
+        for y in range(start.y, stop.y):
+            line = self.doc[y]
+            lines.append(line.text[x:])
+            x = 0
+        if stop.x > 0:
+            line = self.doc[stop.y]
+            lines.append(line.text[:stop.x])
+        return '\n'.join(lines)
+
     def delete_selection(self):
         if self.selection is not None:
             # self.doc.start_compound()
@@ -276,7 +292,7 @@ class View(FocusTarget):
         if self.selection is not None:
             self.delete_selection()
         if self.doc.add_char(key, self.cursor, self.insert):
-            self.move_right(0)
+            self.action_move_right()
 
     def process_key(self, key):
         if len(key) == 1:
@@ -303,34 +319,68 @@ class View(FocusTarget):
         self.cursor = new_cursor
         self.scroll_display()
 
-    def move_left(self, flags):
-        self.process_movement((-1, 0), flags)
+    def action_move_left(self):
+        self.process_movement((-1, 0), 0)
 
-    def move_right(self, flags):
-        self.process_movement((1, 0), flags)
+    def action_move_right(self):
+        self.process_movement((1, 0), 0)
 
-    def move_up(self, flags):
-        self.process_movement((0, -1), flags)
+    def action_move_up(self):
+        self.process_movement((0, -1), 0)
 
-    def move_down(self, flags):
-        self.process_movement((0, 1), flags)
+    def action_move_down(self):
+        self.process_movement((0, 1), 0)
 
-    def move_home(self, flags):
-        self.process_movement((-self.cursor.x, 0), flags)
+    def action_move_home(self):
+        self.process_movement((-self.cursor.x, 0), 0)
 
-    def move_end(self, flags):
+    def action_move_end(self):
         if self.doc:
             n = len(self.doc[self.cursor.y])
-            self.process_movement((n, 0), flags)
+            self.process_movement((n, 0), 0)
 
-    def move_bod(self, flags):
-        self.process_movement((-self.cursor.x, -self.cursor.y), flags)
+    def action_move_bod(self):
+        self.process_movement((-self.cursor.x, -self.cursor.y), 0)
 
-    def move_eod(self, flags):
+    def action_move_eod(self):
         if self.doc:
             m = self.doc.size() - self.cursor.y
             n = len(self.doc[-1]) - self.cursor.x
-            self.process_movement((n, m), flags)
+            self.process_movement((n, m), 0)
 
-    def move_word_left(self, flags):
+    def action_move_word_left(self):
         pass
+
+    def action_select_left(self):
+        self.process_movement((-1, 0), config.SHIFTED)
+
+    def action_select_right(self):
+        self.process_movement((1, 0), config.SHIFTED)
+
+    def action_select_up(self):
+        self.process_movement((0, -1), config.SHIFTED)
+
+    def action_select_down(self):
+        self.process_movement((0, 1), config.SHIFTED)
+
+    def action_select_home(self):
+        self.process_movement((-self.cursor.x, 0), config.SHIFTED)
+
+    def action_select_end(self):
+        if self.doc:
+            n = len(self.doc[self.cursor.y])
+            self.process_movement((n, 0), config.SHIFTED)
+
+    def action_select_bod(self):
+        self.process_movement((-self.cursor.x, -self.cursor.y), config.SHIFTED)
+
+    def action_select_eod(self):
+        if self.doc:
+            m = self.doc.size() - self.cursor.y
+            n = len(self.doc[-1]) - self.cursor.x
+            self.process_movement((n, m), config.SHIFTED)
+
+    def action_copy(self):
+        if self.selection is not None:
+            text = self.get_selection_text()
+            pyperclip.copy(text)

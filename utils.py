@@ -26,7 +26,8 @@ def ctrl(key):
     return chr(ord(key) - ord('A') + 1)
 
 
-def center_rect(size: Point):
+def center_rect(*args):
+    size = Point(*args)
     from config import get_app
     sw = get_app().width()
     sh = get_app().height()
@@ -39,4 +40,15 @@ def fit_text(text, width):
         return text[0:width]
     if len(text) < width:
         return text + ' ' * (width - len(text))
+    return text
+
+
+def center_text(text, width):
+    if len(text) > width:
+        return text[0:width]
+    if len(text) < width:
+        wl = width - len(text)
+        w1 = wl // 2
+        w2 = wl - w1
+        return ' ' * w1 + text + ' ' * w2
     return text

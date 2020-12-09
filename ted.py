@@ -35,7 +35,7 @@ class Application(Screen):
     def add_view(self, view):
         self.views.append(view)
         if self.focus is None:
-            self.focus = view
+            self.set_focus(view)
 
     def render(self):
         self.draw_menu_bar()
@@ -54,6 +54,12 @@ class Application(Screen):
 
     def set_focus(self, target):
         self.focus = target
+        if hasattr(target, 'on_focus'):
+            target.on_focus()
+
+    def close_menu(self):
+        self.set_focus(self.views[0])
+        self.cursor(True)
 
     def process_input(self):
         if self.terminating:
@@ -67,19 +73,23 @@ class Application(Screen):
         if self.process_shortcuts(key):
             return True
         if self.focus is not None:
+            if hasattr(self.focus, 'll_key'):
+                self.focus.ll_key(key)
             if key in config.keymap:
-                flags: int
-                action, flags = config.keymap.get(key)
-                if hasattr(self.focus, action):
-                    func = getattr(self.focus, action)
-                    func(flags)
-                elif hasattr(self.focus, 'on_action'):
-                    func = getattr(self.focus, 'on_action')
-                    func(action, flags)
+                action = config.keymap.get(key)
+                self.on_action(action)
             else:
                 if hasattr(self.focus, 'process_key'):
                     self.focus.process_key(key)
         return True
+
+    def on_action(self, action):
+        func_name = f'action_{action}'
+        if hasattr(self.focus, func_name):
+            func = getattr(self.focus, func_name)
+            func()
+        elif hasattr(self.focus, 'on_action'):
+            self.focus.on_action(action)
 
     def place_cursor(self):
         if self.focus is not None and hasattr(self.focus, 'place_cursor'):
@@ -116,7 +126,10 @@ class Application(Screen):
         self.write('\u2592' * (self.width() - 1), 0)
 
     def on_keymap_dialog(self):
-        self.focus = KeymapDialog()
+        self.set_focus(KeymapDialog())
+
+    def on_copy(self):
+        self.on_action('copy')
 
 
 def message_box(text):

@@ -52,3 +52,11 @@ def center_text(text, width):
         w2 = wl - w1
         return ' ' * w1 + text + ' ' * w2
     return text
+
+
+def call_by_name(obj, func_name, *args):
+    if hasattr(obj, func_name):
+        f = getattr(obj, func_name)
+        f(*args)
+        return True
+    return False

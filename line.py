@@ -47,7 +47,10 @@ class Line:
         self.set_text(self.text[0:x] + self.text[x + 1:])
 
     def delete_block(self, from_index, to_index):
-        self.set_text(self.text[0:from_index] + self.text[to_index:])
+        if to_index==-1:
+            self.set_text(self.text[0:from_index])
+        else:
+            self.set_text(self.text[0:from_index] + self.text[to_index:])
 
     def set_text(self, text):
         self.text = text

@@ -67,13 +67,19 @@ class View(FocusTarget):
             return x, y
         return 0, 0
 
-    def insert_text(self, text):
-        line = self.doc[self.cursor.y]
-        if self.cursor.x >= line.size():
-            line.append_text(text)
-        else:
-            line.insert_text(self.cursor.x, text)
-        self.cursor.move(1, 0)
+    def insert_text(self, full_text):
+        text_lines = full_text.split('\n')
+        first = True
+        for text in text_lines:
+            if not first:
+                self.action_enter()
+            line = self.doc[self.cursor.y]
+            if self.cursor.x >= line.size():
+                line.append_text(text)
+            else:
+                line.insert_text(self.cursor.x, text)
+            self.cursor.move(len(text), 0)
+            first = False
         self.draw_cursor_line()
         self.place_cursor()
 
@@ -113,6 +119,9 @@ class View(FocusTarget):
         self.redraw_all()
 
     def action_delete(self):
+        if self.selection is not None:
+            self.delete_selection()
+            return
         line = self.doc[self.cursor.y]
         if self.cursor.x < line.size():
             line.delete_char(self.cursor.x)
@@ -124,6 +133,9 @@ class View(FocusTarget):
             self.redraw_all()
 
     def action_backspace(self):
+        if self.selection is not None:
+            self.delete_selection()
+            return
         line = self.doc[self.cursor.y]
         if self.cursor.x > 0:
             line.delete_char(self.cursor.x - 1)
@@ -270,6 +282,8 @@ class View(FocusTarget):
         if stop.x > 0:
             line = self.doc[stop.y]
             lines.append(line.text[:stop.x])
+        else:
+            lines.append('')
         return '\n'.join(lines)
 
     def delete_selection(self):
@@ -384,3 +398,9 @@ class View(FocusTarget):
         if self.selection is not None:
             text = self.get_selection_text()
             pyperclip.copy(text)
+
+    def action_paste(self):
+        if self.selection is not None:
+            self.delete_selection()
+        text = pyperclip.paste()
+        self.insert_text(text)

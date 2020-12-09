@@ -7,7 +7,7 @@ from view import View
 from screen import Screen
 from window import Window
 from wm import WindowManager
-# from utils import ExitException
+from utils import call_by_name
 import config
 import traceback
 from dialogs.keymap_dialog import KeymapDialog
@@ -85,11 +85,12 @@ class Application(Screen):
 
     def on_action(self, action):
         func_name = f'action_{action}'
-        if hasattr(self.focus, func_name):
-            func = getattr(self.focus, func_name)
-            func()
-        elif hasattr(self.focus, 'on_action'):
-            self.focus.on_action(action)
+        self.keylog.write(f'Action: {action}\n')
+        self.keylog.flush()
+        if not call_by_name(self,func_name):
+            if not call_by_name(self.focus, func_name):
+                if hasattr(self.focus, 'on_action'):
+                    self.focus.on_action(action)
 
     def place_cursor(self):
         if self.focus is not None and hasattr(self.focus, 'place_cursor'):
@@ -125,11 +126,8 @@ class Application(Screen):
         self.move((0, self.height() - 1))
         self.write('\u2592' * (self.width() - 1), 0)
 
-    def on_keymap_dialog(self):
+    def action_keymap_dialog(self):
         self.set_focus(KeymapDialog())
-
-    def on_copy(self):
-        self.on_action('copy')
 
 
 def message_box(text):

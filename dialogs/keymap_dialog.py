@@ -20,14 +20,15 @@ class KeymapDialog(Dialog):
         self.add_widget(self._search_text)
         self._search_text.listen('modified', self.on_search)
 
+        self._key_field = KeyWidget(self.subwin(23, 3, 14, 3))
+        self._key_field.set_title('Key')
+
         self._action_list = ListWidget(self.subwin(3, 4, 18, 11))
         self._action_list.set_title('Actions')
         self._action_list.listen('selection_changed', self.selected_action)
         self.fill_action_list()
-        self.add_widget(self._action_list)
 
-        self._key_field = KeyWidget(self.subwin(23, 3, 14, 3))
-        self._key_field.set_title('Key')
+        self.add_widget(self._action_list)
         self.add_widget(self._key_field)
 
         self._assign_button = Button(self.subwin(23, 9, 14, 3), 'Assign')
@@ -50,6 +51,7 @@ class KeymapDialog(Dialog):
         for item in sorted(list(action_list)):
             if len(term) == 0 or term in item:
                 self._action_list.add_item(item)
+        self.selected_action()
 
     def selected_action(self):
         action, _ = self._action_list.get_selection()

@@ -8,6 +8,7 @@ from focus import FocusTarget
 import pyperclip
 
 
+# noinspection PyTypeChecker
 class View(FocusTarget):
     def __init__(self, window, doc=None):
         super().__init__()
@@ -49,18 +50,19 @@ class View(FocusTarget):
         if self.doc:
             y = c.y - self.visual_offset.y
             line = self.doc[c.y]
-            last = None
+            last: Token = None
             x = 0
-            for t in line.tokens:
-                if t.text_index <= c.x <= (t.text_index + len(t.text)):
-                    x = t.visual_index + (c.x - t.text_index)
+            for k in range(line.get_token_count()):
+                t = line.get_token(k)
+                if t.get_text_index() <= c.x <= (t.get_text_index() + len(t.get_text())):
+                    x = t.get_visual_index() + (c.x - t.get_text_index())
                     break
-                if c.x < t.text_index:
-                    x = t.visual_index
-                    for i in range(t.text_index - c.x):
+                if c.x < t.get_text_index():
+                    x = t.get_visual_index()
+                    for i in range(t.get_text_index() - c.x):
                         x = x - config.const.TABSIZE
-                        if last and x <= (last.visual_index + len(last.text)):
-                            x = last.visual_index + len(last.text)
+                        if last and x <= (last.get_visual_index() + len(last.get_text())):
+                            x = last.get_visual_index() + len(last.get_text())
                             break
                     break
                 last = t
@@ -93,8 +95,8 @@ class View(FocusTarget):
                 y1 = y1 - 1
             while y0 <= y1:
                 line = self.doc[y0]
-                if line.text.startswith('\t'):
-                    line.set_text(line.text[1:])
+                if line.get_text().startswith('\t'):
+                    line.set_text(line.get_text()[1:])
                 y0 = y0 + 1
 
     def action_tab(self):
@@ -157,16 +159,16 @@ class View(FocusTarget):
         idx = 0
         while idx < len(tokens):
             token = tokens[idx]
-            if token.visual_index > visual:
-                n = token.visual_index - visual
+            if token.get_visual_index() > visual:
+                n = token.get_visual_index() - visual
                 t = Token(' ' * n, visual, text_index)
-                t.blank = True
+                t._blank = True
                 tokens.insert(idx, t)
-                visual = token.visual_index
-                text_index = token.text_index
+                visual = token.get_visual_index()
+                text_index = token.get_text_index()
             else:
-                text_index += len(token.text)
-                visual += len(token.text)
+                text_index += len(token.get_text())
+                visual += len(token.get_text())
             idx = idx + 1
         if text_index < width:
             n = width - text_index
@@ -182,32 +184,32 @@ class View(FocusTarget):
                 else:
                     from_i = start.x
                 if stop.y > y:
-                    to_i = tokens[-1].text_index + len(tokens[-1].text)
+                    to_i = tokens[-1].get_text_index() + len(tokens[-1].get_text())
                 else:
                     to_i = stop.x
                 i = 0
                 while i < len(tokens):
                     token = tokens[i]
-                    t_start = token.text_index
-                    t_stop = token.text_index + len(token.text)
+                    t_start = token.get_text_index()
+                    t_stop = token.get_text_index() + len(token.get_text())
                     if from_i <= t_start and to_i >= t_stop:
-                        token.color = sel_highlight
+                        token.set_color(sel_highlight)
                         i = i + 1
                     elif from_i >= t_stop or to_i <= t_start:
                         i = i + 1
                     elif from_i > t_start:
                         n = from_i - t_start
-                        next_token = Token(token.text[n:], token.visual_index + n, token.text_index + n)
-                        next_token.color = 1
-                        token.text = token.text[0:n]
+                        next_token = token.get_right_part(n)
+                        next_token.set_color(1)
+                        token.set_text(token.get_text()[0:n])
                         tokens.insert(i + 1, next_token)
                         i = i + 1
                     else:
                         n = to_i - t_start
-                        next_token = Token(token.text[n:], token.visual_index + n, token.text_index + n)
-                        next_token.color = token.color
-                        token.text = token.text[0:n]
-                        token.color = sel_highlight
+                        next_token = token.get_right_part(n)
+                        next_token.set_color(token.get_color())
+                        token.set_text(token.get_text()[0:n])
+                        token.set_color(sel_highlight)
                         tokens.insert(i + 1, next_token)
                         i = i + 1
 
@@ -215,14 +217,14 @@ class View(FocusTarget):
         i = 0
         while i < len(tokens):
             t = tokens[i]
-            if t.visual_index >= self.width() or (t.visual_index + len(t.text)) <= 0:
+            if t.get_visual_index() >= self.width() or (t.get_visual_index() + len(t)) <= 0:
                 del tokens[i]
             else:
-                if t.visual_index < 0:
-                    t.text = t.text[-t.visual_index:]
-                    t.visual_index = 0
-                if (t.visual_index + len(t.text)) > self.width():
-                    t.text = t.text[0:(self.width() - t.visual_index - len(t.text))]
+                if t.get_visual_index() < 0:
+                    t.set_text(t.get_text()[-t.get_visual_index():])
+                    t.set_visual_index(0)
+                if (t.get_visual_index() + len(t)) > self.width():
+                    t.set_text(t.get_text()[0:(self.width() - t.get_visual_index() - len(t))])
                 i = i + 1
 
     def draw_cursor_line(self):
@@ -238,17 +240,17 @@ class View(FocusTarget):
             self.window.text(' ' * self.window.width())
             return
         line = self.doc[line_index]
-        tokens = [t.clone() for t in line.tokens]
+        tokens = [line.get_token(i) for i in range(line.get_token_count())]
         self.fill_blanks(tokens, self.window.width())
         self.add_highlights(y, tokens)
         tokens = [t.move(-self.visual_offset.x) for t in tokens]
         self.clamp_tokens(tokens)
         cx = 0
         for token in tokens:
-            self.window.set_cursor(token.visual_index, y)
-            self.window.set_color(token.color)
-            self.window.text(token.text)
-            cx = cx + len(token.text)
+            self.window.set_cursor(token.get_visual_index(), y)
+            self.window.set_color(token.get_color())
+            self.window.text(token.get_text())
+            cx = cx + len(token.get_text())
         if cx < self.width():
             self.window.set_color(0)
             self.window.text(' ' * (self.width() - cx))
@@ -277,11 +279,11 @@ class View(FocusTarget):
         lines = []
         for y in range(start.y, stop.y):
             line = self.doc[y]
-            lines.append(line.text[x:])
+            lines.append(line.get_text()[x:])
             x = 0
         if stop.x > 0:
             line = self.doc[stop.y]
-            lines.append(line.text[:stop.x])
+            lines.append(line.get_text()[:stop.x])
         else:
             lines.append('')
         return '\n'.join(lines)

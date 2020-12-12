@@ -34,7 +34,7 @@ class Screen:
         self.box = '\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b'
         sys.stdout.write('\033]12;yellow\007')
         self.keylog = None
-        self.dbg = open('screen.log', 'w')
+        self.dbg = None  # open('screen.log', 'w')
 
     def width(self):
         return self.size[0]
@@ -55,8 +55,9 @@ class Screen:
         curses.curs_set(1 if state else 0)
 
     def write(self, text, color):
-        self.dbg.write(f'write("{text}",{color})\n')
-        self.dbg.flush()
+        if self.dbg is not None:
+            self.dbg.write(f'write("{text}",{color})\n')
+            self.dbg.flush()
         attr = 0
         color = curses.color_pair(color | (attr & 0x7FFF))
         try:

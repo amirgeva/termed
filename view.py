@@ -1,21 +1,23 @@
 from typing import List
 from cursor import Cursor
-# from line import Line
-from text_token import Token
+from visual_token import VisualToken
+from visual_line import VisualLine
 import config
 from geom import Point, Range
 from focus import FocusTarget
+from window import Window
+from doc import Document
 import pyperclip
 
 
 # noinspection PyTypeChecker
 class View(FocusTarget):
-    def __init__(self, window, doc=None):
+    def __init__(self, window: Window, doc: Document = None):
         super().__init__()
         self.window = window
         self.doc = doc
         self.visual_offset = Point(0, 0)
-        self.selection = None
+        self.selection: Range = None
         self.cursor = Cursor()
         self.last_x = 0
         self.redraw = True
@@ -32,7 +34,7 @@ class View(FocusTarget):
             c.move(dx, dy)
             c.clamp_y(0, self.doc.size())
             line = self.doc[c.y]
-            c.clamp_x(0, line.size())
+            c.clamp_x(0, line.get_logical_len())
 
     def move_cursor(self, dx: int, dy: int, move_selection: bool):
         if move_selection:
@@ -50,36 +52,21 @@ class View(FocusTarget):
         if self.doc:
             y = c.y - self.visual_offset.y
             line = self.doc[c.y]
-            last: Token = None
-            x = 0
-            for k in range(line.get_token_count()):
-                t = line.get_token(k)
-                if t.get_text_index() <= c.x <= (t.get_text_index() + len(t.get_text())):
-                    x = t.get_visual_index() + (c.x - t.get_text_index())
-                    break
-                if c.x < t.get_text_index():
-                    x = t.get_visual_index()
-                    for i in range(t.get_text_index() - c.x):
-                        x = x - config.const.TABSIZE
-                        if last and x <= (last.get_visual_index() + len(last.get_text())):
-                            x = last.get_visual_index() + len(last.get_text())
-                            break
-                    break
-                last = t
+            x = line.get_visual_index(c.x) - self.visual_offset.x
             return x, y
         return 0, 0
 
-    def insert_text(self, full_text):
+    def insert_text(self, full_text: str):
         text_lines = full_text.split('\n')
         first = True
         for text in text_lines:
             if not first:
                 self.action_enter()
             line = self.doc[self.cursor.y]
-            if self.cursor.x >= line.size():
-                line.append_text(text)
+            if self.cursor.x >= line.get_logical_len():
+                line.append(text)
             else:
-                line.insert_text(self.cursor.x, text)
+                line.insert(self.cursor.x, text)
             self.cursor.move(len(text), 0)
             first = False
         self.draw_cursor_line()
@@ -88,27 +75,27 @@ class View(FocusTarget):
     def action_backtab(self):
         if self.selection is not None:
             y0 = self.selection.start.y
-            if self.selection.start.x >= self.doc[y0].size():
+            if self.selection.start.x >= self.doc[y0].get_logical_len():
                 y0 = y0 + 1
             y1 = self.selection.stop.y
             if self.selection.stop.x == 0:
                 y1 = y1 - 1
             while y0 <= y1:
                 line = self.doc[y0]
-                if line.get_text().startswith('\t'):
-                    line.set_text(line.get_text()[1:])
+                if line.get_logical_text().startswith('\t'):
+                    line.erase(0)
                 y0 = y0 + 1
 
     def action_tab(self):
         if self.selection is not None:
             y0 = self.selection.start.y
-            if self.selection.start.x >= self.doc[y0].size():
+            if self.selection.start.x >= self.doc[y0].get_logical_len():
                 y0 = y0 + 1
             y1 = self.selection.stop.y
             if self.selection.stop.x == 0:
                 y1 = y1 - 1
             while y0 <= y1:
-                self.doc[y0].insert_text(0, '\t')
+                self.doc[y0].insert(0, '\t')
                 y0 = y0 + 1
         else:
             self.insert_text('\t')
@@ -125,12 +112,12 @@ class View(FocusTarget):
             self.delete_selection()
             return
         line = self.doc[self.cursor.y]
-        if self.cursor.x < line.size():
-            line.delete_char(self.cursor.x)
+        if self.cursor.x < line.get_logical_len():
+            line.erase(self.cursor.x)
             self.draw_cursor_line()
         elif self.cursor.y < (self.doc.size() - 1):
             next_line = self.doc[self.cursor.y + 1]
-            line.join(next_line)
+            line.extend(next_line)
             self.doc.delete_line(self.cursor.y + 1)
             self.redraw_all()
 
@@ -140,92 +127,38 @@ class View(FocusTarget):
             return
         line = self.doc[self.cursor.y]
         if self.cursor.x > 0:
-            line.delete_char(self.cursor.x - 1)
+            line.erase(self.cursor.x - 1)
             self.cursor.move(-1, 0)
             self.draw_cursor_line()
             self.place_cursor()
         elif self.cursor.y > 0:
             prev_line = self.doc[self.cursor.y - 1]
-            x = prev_line.size()
-            prev_line.join(line)
+            x = prev_line.get_logical_len()
+            prev_line.extend(line)
             self.doc.delete_line(self.cursor.y)
             self.cursor = Cursor(x, self.cursor.y - 1)
             self.redraw_all()
 
-    @staticmethod
-    def fill_blanks(tokens: List[Token], width):
-        visual = 0
-        text_index = 0
-        idx = 0
-        while idx < len(tokens):
-            token = tokens[idx]
-            if token.get_visual_index() > visual:
-                n = token.get_visual_index() - visual
-                t = Token(' ' * n, visual, text_index)
-                t._blank = True
-                tokens.insert(idx, t)
-                visual = token.get_visual_index()
-                text_index = token.get_text_index()
-            else:
-                text_index += len(token.get_text())
-                visual += len(token.get_text())
-            idx = idx + 1
-        if text_index < width:
-            n = width - text_index
-            tokens.append(Token(' ' * n, visual, text_index))
-
-    def add_highlights(self, y, tokens: List[Token]):
+    def add_highlights(self, y: int, line: VisualLine) -> List[VisualToken]:
+        text = line.get_visual_text()
+        res = []
         if self.selection:
             start, stop = self.selection.get_ordered()
             sel_highlight = 1
             if start.y <= y <= stop.y:
-                if start.y < y:
-                    from_i = 0
-                else:
-                    from_i = start.x
-                if stop.y > y:
-                    to_i = tokens[-1].get_text_index() + len(tokens[-1].get_text())
-                else:
-                    to_i = stop.x
-                i = 0
-                while i < len(tokens):
-                    token = tokens[i]
-                    t_start = token.get_text_index()
-                    t_stop = token.get_text_index() + len(token.get_text())
-                    if from_i <= t_start and to_i >= t_stop:
-                        token.set_color(sel_highlight)
-                        i = i + 1
-                    elif from_i >= t_stop or to_i <= t_start:
-                        i = i + 1
-                    elif from_i > t_start:
-                        n = from_i - t_start
-                        next_token = token.get_right_part(n)
-                        next_token.set_color(1)
-                        token.set_text(token.get_text()[0:n])
-                        tokens.insert(i + 1, next_token)
-                        i = i + 1
-                    else:
-                        n = to_i - t_start
-                        next_token = token.get_right_part(n)
-                        next_token.set_color(token.get_color())
-                        token.set_text(token.get_text()[0:n])
-                        token.set_color(sel_highlight)
-                        tokens.insert(i + 1, next_token)
-                        i = i + 1
-
-    def clamp_tokens(self, tokens: List[Token]):
-        i = 0
-        while i < len(tokens):
-            t = tokens[i]
-            if t.get_visual_index() >= self.width() or (t.get_visual_index() + len(t)) <= 0:
-                del tokens[i]
+                from_i = 0 if start.y < y else line.get_visual_index(start.x)
+                to_i = len(text) if stop.y > y else line.get_visual_index(stop.x)
+                if from_i > 0:
+                    res.append(VisualToken(0, text[0:from_i]))
+                res.append(VisualToken(from_i, text[from_i:to_i]))
+                res[-1].set_color(sel_highlight)
+                if to_i < len(text):
+                    res.append(VisualToken(to_i, text[to_i:]))
             else:
-                if t.get_visual_index() < 0:
-                    t.set_text(t.get_text()[-t.get_visual_index():])
-                    t.set_visual_index(0)
-                if (t.get_visual_index() + len(t)) > self.width():
-                    t.set_text(t.get_text()[0:(self.width() - t.get_visual_index() - len(t))])
-                i = i + 1
+                res.append(VisualToken(0, text))
+        else:
+            res.append(VisualToken(0, text))
+        return res
 
     def draw_cursor_line(self):
         self.draw_line(self.cursor.y - self.visual_offset.y)
@@ -240,18 +173,22 @@ class View(FocusTarget):
             self.window.text(' ' * self.window.width())
             return
         line = self.doc[line_index]
-        tokens = [line.get_token(i) for i in range(line.get_token_count())]
-        self.fill_blanks(tokens, self.window.width())
-        self.add_highlights(y, tokens)
-        tokens = [t.move(-self.visual_offset.x) for t in tokens]
-        self.clamp_tokens(tokens)
+        tokens = self.add_highlights(y, line)
+        x0 = self.visual_offset.x
+        x1 = x0 + self.window.width()
+        for token in tokens:
+            token.move(-x0)
+            token.clip(x0, x1)
         cx = 0
         for token in tokens:
-            self.window.set_cursor(token.get_visual_index(), y)
-            self.window.set_color(token.get_color())
-            self.window.text(token.get_text())
-            cx = cx + len(token.get_text())
+            text = token.get_text()
+            if len(text) > 0:
+                self.window.set_cursor(token.get_pos(), y)
+                self.window.set_color(token.get_color())
+                self.window.text(text)
+                cx = cx + len(text)
         if cx < self.width():
+            self.window.set_cursor(cx, y)
             self.window.set_color(0)
             self.window.text(' ' * (self.width() - cx))
 
@@ -279,11 +216,11 @@ class View(FocusTarget):
         lines = []
         for y in range(start.y, stop.y):
             line = self.doc[y]
-            lines.append(line.get_text()[x:])
+            lines.append(line.get_logical_text()[x:])
             x = 0
         if stop.x > 0:
             line = self.doc[stop.y]
-            lines.append(line.get_text()[:stop.x])
+            lines.append(line.get_logical_text()[:stop.x])
         else:
             lines.append('')
         return '\n'.join(lines)
@@ -304,26 +241,25 @@ class View(FocusTarget):
             # self.doc.stop_compound()
         self.selection = None
 
-    def process_text_key(self, key):
+    def process_text_key(self, key: str):
         if self.selection is not None:
             self.delete_selection()
         if self.doc.add_char(key, self.cursor, self.insert):
             self.action_move_right()
 
-    def process_key(self, key):
+    def process_key(self, key: str):
         if len(key) == 1:
             code = ord(key)
             if 32 <= code < 127:
                 self.process_text_key(key)
 
-    def process_movement(self, movement, flags):
+    def process_movement(self, movement: Point, flags: int):
         shift = (flags & config.SHIFTED) != 0
         if not shift:
             self.selection = None
         else:
             if self.selection is None:
                 self.selection = Range(self.cursor, self.cursor)
-        movement = Point(movement)
         new_cursor = self.doc.set_cursor(self.cursor + movement)
         if movement.x != 0:
             self.last_x = new_cursor.x
@@ -336,65 +272,65 @@ class View(FocusTarget):
         self.scroll_display()
 
     def action_move_left(self):
-        self.process_movement((-1, 0), 0)
+        self.process_movement(Point(-1, 0), 0)
 
     def action_move_right(self):
-        self.process_movement((1, 0), 0)
+        self.process_movement(Point(1, 0), 0)
 
     def action_move_up(self):
-        self.process_movement((0, -1), 0)
+        self.process_movement(Point(0, -1), 0)
 
     def action_move_down(self):
-        self.process_movement((0, 1), 0)
+        self.process_movement(Point(0, 1), 0)
 
     def action_move_home(self):
-        self.process_movement((-self.cursor.x, 0), 0)
+        self.process_movement(Point(-self.cursor.x, 0), 0)
 
     def action_move_end(self):
         if self.doc:
-            n = len(self.doc[self.cursor.y])
-            self.process_movement((n, 0), 0)
+            n = self.doc[self.cursor.y].get_logical_len()
+            self.process_movement(Point(n, 0), 0)
 
     def action_move_bod(self):
-        self.process_movement((-self.cursor.x, -self.cursor.y), 0)
+        self.process_movement(Point(-self.cursor.x, -self.cursor.y), 0)
 
     def action_move_eod(self):
         if self.doc:
             m = self.doc.size() - self.cursor.y
-            n = len(self.doc[-1]) - self.cursor.x
-            self.process_movement((n, m), 0)
+            n = self.doc[-1].get_logical_len() - self.cursor.x
+            self.process_movement(Point(n, m), 0)
 
     def action_move_word_left(self):
         pass
 
     def action_select_left(self):
-        self.process_movement((-1, 0), config.SHIFTED)
+        self.process_movement(Point(-1, 0), config.SHIFTED)
 
     def action_select_right(self):
-        self.process_movement((1, 0), config.SHIFTED)
+        self.process_movement(Point(1, 0), config.SHIFTED)
 
     def action_select_up(self):
-        self.process_movement((0, -1), config.SHIFTED)
+        self.process_movement(Point(0, -1), config.SHIFTED)
 
     def action_select_down(self):
-        self.process_movement((0, 1), config.SHIFTED)
+        self.process_movement(Point(0, 1), config.SHIFTED)
 
     def action_select_home(self):
-        self.process_movement((-self.cursor.x, 0), config.SHIFTED)
+        self.process_movement(Point(-self.cursor.x, 0), config.SHIFTED)
 
     def action_select_end(self):
         if self.doc:
-            n = len(self.doc[self.cursor.y])
-            self.process_movement((n, 0), config.SHIFTED)
+            n = self.doc[self.cursor.y].get_logical_len()
+            self.process_movement(Point(n, 0), config.SHIFTED)
 
     def action_select_bod(self):
-        self.process_movement((-self.cursor.x, -self.cursor.y), config.SHIFTED)
+        self.process_movement(Point(-self.cursor.x, -self.cursor.y), config.SHIFTED)
 
     def action_select_eod(self):
         if self.doc:
             m = self.doc.size() - self.cursor.y
-            n = len(self.doc[-1]) - self.cursor.x
-            self.process_movement((n, m), config.SHIFTED)
+            n = self.doc[-1].get_logical_len() - self.cursor.x
+            self.process_movement(Point(n, m), config.SHIFTED)
 
     def action_copy(self):
         if self.selection is not None:

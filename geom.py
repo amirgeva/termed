@@ -153,7 +153,7 @@ class Rect(object):
     def inflate(self, d):
         if isinstance(d, Point):
             self.pos -= d
-            self.size += 2 * d
+            self.size += d+d
         else:
             self.pos -= Point(d, d)
             self.size += Point(2 * d, 2 * d)
@@ -164,4 +164,3 @@ class Rect(object):
             p = Point(p)
         p -= self.pos
         return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
-

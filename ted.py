@@ -87,7 +87,7 @@ class Application(Screen):
         func_name = f'action_{action}'
         self.keylog.write(f'Action: {action}\n')
         self.keylog.flush()
-        if not call_by_name(self,func_name):
+        if not call_by_name(self, func_name):
             if not call_by_name(self.focus, func_name):
                 if hasattr(self.focus, 'on_action'):
                     self.focus.on_action(action)

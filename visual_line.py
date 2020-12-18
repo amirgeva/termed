@@ -33,6 +33,9 @@ class VisualLine:
         self.set_text(self._logical_text[0:pos] + text + self._logical_text[pos:])
         return True
 
+    def append(self, text: str):
+        return self.insert(self.get_logical_len(), text)
+
     def erase(self, pos: int, n: int = 1):
         if pos < 0 or pos >= len(self._logical_text):
             return False
@@ -77,6 +80,16 @@ class VisualLine:
                 else:
                     pos = tab
         return pos
+
+    def split(self, pos: int):
+        if pos < 0 or pos > self.get_logical_len():
+            raise RuntimeError("Invalid line split")
+        if pos == self.get_logical_len():
+            return VisualLine()
+        text = self.get_logical_text()
+        next_line = VisualLine(text[pos:])
+        self.erase(pos, len(text) - pos)
+        return next_line
 
     def extend(self, line):
         if isinstance(line, VisualLine):

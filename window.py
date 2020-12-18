@@ -17,8 +17,9 @@ class Window:
         else:
             self.rect = Rect(0, 0, 5, 5)
             self.size_preference = Point(5, 5)
-        self.color = 0
-        self.border = True
+        self._color = 0
+        self._border = True
+        self._title = ''
 
     def contains(self, p):
         if not isinstance(p, Point):
@@ -33,36 +34,38 @@ class Window:
 
     def width(self):
         w = self.rect.width()
-        return w - 2 if self.border else w
+        return w - 2 if self._border else w
 
     def height(self):
         h = self.rect.height()
-        return h - 2 if self.border else h
+        return h - 2 if self._border else h
 
     def requested_size(self):
         return self.size_preference
 
     def set_cursor(self, *args):
         p = Point(*args)
-        if self.border:
+        if self._border:
             p = p + Point(1, 1)
         get_app().move(self.rect.pos + p)
 
     def set_color(self, color):
-        self.color = color
+        self._color = color
 
     def text(self, s):
-        get_app().write(s, self.color)
+        get_app().write(s, self._color)
 
     def render(self):
-        if self.border:
+        if self._border:
             get_app().draw_frame(self.rect, 0)
+            if len(self._title) > 0:
+                self.render_title()
 
-    def render_title(self, title):
-        if self.border:
+    def render_title(self):
+        if self._border:
             app = get_app()
             app.move(self.rect.pos + Point(1, 0))
-            app.write(title, 0)
+            app.write(self._title, 0)
 
     def subwindow(self, rect: Rect):
         rect.move(self.rect.top_left())

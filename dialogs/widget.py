@@ -7,7 +7,6 @@ class Widget(FocusTarget):
         super().__init__()
         self._window = win
         self._parent = None
-        self._title = None
         self._cursor_on = False
         self._signals = {}
 
@@ -26,7 +25,7 @@ class Widget(FocusTarget):
         self._parent = parent
 
     def set_title(self, title):
-        self._title = title
+        self._window.set_title(title)
 
     def on_focus(self):
         get_app().cursor(self._cursor_on)
@@ -43,5 +42,3 @@ class Widget(FocusTarget):
 
     def render(self):
         self._window.render()
-        if self._title:
-            self._window.render_title(self._title)

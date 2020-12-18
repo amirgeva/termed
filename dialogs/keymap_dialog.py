@@ -39,9 +39,6 @@ class KeymapDialog(Dialog):
         self.add_widget(self._save_button)
         self._save_button.listen('clicked', save_keymap)
 
-    def subwin(self, *args):
-        return self._window.subwindow(Rect(*args))
-
     def on_search(self):
         self.fill_action_list()
 

@@ -1,3 +1,4 @@
+from geom import Rect
 from focus import FocusTarget
 from dialogs.widget import Widget
 
@@ -25,6 +26,9 @@ class Dialog(FocusTarget):
                 w.render()
         if self._focus is not None:
             self._focus.render()
+
+    def subwin(self, *args):
+        return self._window.subwindow(Rect(*args))
 
     @property
     def focus(self):

@@ -32,6 +32,7 @@ class Screen:
         curses.init_pair(7, config.get_int('fg7', curses.COLOR_WHITE),
                          config.get_int('bg7', curses.COLOR_RED))
         self.box = '\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b'
+        self.tees = '\u2533\u2523\u252b\u253b\u254b'
         sys.stdout.write('\033]12;yellow\007')
         self.dbg = None  # open('screen.log', 'w')
 
@@ -77,7 +78,7 @@ class Screen:
             self.move((x0, y))
             self.write(c * w, clr)
 
-    def draw_frame(self, rect, color):
+    def draw_frame(self, rect: Rect, color: int):
         self.move(rect.pos)
         self.write(self.box[0], color)
         for i in range(rect.width() - 2):
@@ -93,6 +94,12 @@ class Screen:
         for i in range(rect.width() - 2):
             self.write(self.box[7], color)
         self.write(self.box[8], color)
+
+    def draw_frame_text(self, pos: Point, text: str):
+        self.move(pos)
+        self.write(self.tees[2], 0)
+        self.write(text, 0)
+        self.write(self.tees[1], 0)
 
     def refresh(self):
         self.scr.refresh()

@@ -20,6 +20,10 @@ class Window:
         self._color = 0
         self._border = True
         self._title = ''
+        self._footnotes = {}
+
+    def set_footnote(self, pos: int, text: str):
+        self._footnotes[pos] = text
 
     def disable_border(self):
         self._border = False
@@ -66,12 +70,15 @@ class Window:
             get_app().draw_frame(self.rect, 0)
             if len(self._title) > 0:
                 self.render_title()
+            x = self.width() - 2
+            for order in sorted(self._footnotes.keys()):
+                text = self._footnotes.get(order)
+                x -= len(text) + 3
+                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text)
 
     def render_title(self):
         if self._border:
-            app = get_app()
-            app.move(self.rect.pos + Point(1, 0))
-            app.write(self._title, 0)
+            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title)
 
     def subwindow(self, rect: Rect):
         rect.move(self.rect.top_left())

@@ -178,6 +178,7 @@ class View(FocusTarget):
     def render(self):
         title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
         self._window.set_title(title)
+        self._window.set_footnote(0, f'{self._cursor.x + 1},{self._cursor.y + 1}')
         self._window.render()
         self.redraw_all()
 

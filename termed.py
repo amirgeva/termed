@@ -11,6 +11,7 @@ from wm import WindowManager
 from utils import call_by_name
 import config
 import traceback
+from focus import FocusTarget
 from dialogs.keymap_dialog import KeymapDialog
 from dialogs.prompt_dialog import PromptDialog
 from dialogs.file_dialog import FileDialog
@@ -26,6 +27,7 @@ class Application(Screen):
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
         self.focus = None
         self.terminating = False
+        FocusTarget.add(self)
 
     def event_loop(self, modal):
         self._modal = modal

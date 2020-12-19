@@ -19,7 +19,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='ted',
+    name='termed',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
@@ -31,7 +31,7 @@ setup(
     long_description_content_type="text/markdown",
 
     # The project's main homepage.
-    url='https://github.com/amirgeva/ted',
+    url='https://github.com/amirgeva/termed',
 
     # Author details
     author='Amir Geva',
@@ -70,7 +70,7 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     # packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    packages=['.'],
+    packages=['.', 'dialogs', 'unittests'],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -80,7 +80,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['pyperclip'],
+    install_requires=['pyperclip','termcolor'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -104,7 +104,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'ted=ted:main',
+            'termed=termed:main',
         ],
     },
 )

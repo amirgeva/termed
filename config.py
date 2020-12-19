@@ -94,9 +94,9 @@ class Constants:
 
 
 home = os.environ['HOME']
-cfg_dir = os.path.join(home, '.ted')
+cfg_dir = os.path.join(home, '.termed')
 os.makedirs(cfg_dir, 0o755, True)
-cfg_path = os.path.join(cfg_dir, 'ted.ini')
+cfg_path = os.path.join(cfg_dir, 'termed.ini')
 keymap_path = os.path.join(cfg_dir, 'keymap.json')
 cfg = ConfigParser()
 cfg.read(cfg_path)

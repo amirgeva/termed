@@ -36,6 +36,14 @@ class VisualLine:
     def append(self, text: str):
         return self.insert(self.get_logical_len(), text)
 
+    def clip_coords(self, pos: int, n: int):
+        if pos < 0 or pos >= len(self._logical_text):
+            return pos, 0
+        right = pos + n
+        if right > len(self._logical_text):
+            right = len(self._logical_text)
+        return pos, right-pos
+
     def erase(self, pos: int, n: int = 1):
         if pos < 0 or pos >= len(self._logical_text):
             return False

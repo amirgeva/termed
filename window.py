@@ -21,6 +21,9 @@ class Window:
         self._border = True
         self._title = ''
 
+    def set_title(self, title: str):
+        self._title = title
+
     def contains(self, p):
         if not isinstance(p, Point):
             p = Point(p)

@@ -23,6 +23,9 @@ class View(FocusTarget):
         self._redraw = True
         self._insert = True
 
+    def get_doc(self) -> Document:
+        return self._doc
+
     def width(self):
         return self._window.width()
 
@@ -173,6 +176,8 @@ class View(FocusTarget):
         self._window.set_cursor(self.doc2win(self._cursor))
 
     def render(self):
+        title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
+        self._window.set_title(title)
         self._window.render()
         self.redraw_all()
 

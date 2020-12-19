@@ -56,7 +56,7 @@ class Menu(FocusTarget):
     def action_enter(self):
         item = self.items[self.cur]
         if isinstance(item, MenuItem):
-            get_app().close_menu()
+            get_app().close_modal()
             item.activate()
 
     def action_move_left(self):

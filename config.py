@@ -37,6 +37,8 @@ def generate_default_keymap(path: str):
         'kLFT6': 'select_word_left',
         'kRIT6': 'select_word_right',
 
+        'ESC': 'escape',
+
         ctrl('C'): 'copy',
         ctrl('F'): 'find',
         ctrl('X'): 'cut',

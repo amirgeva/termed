@@ -7,6 +7,7 @@ class Button(Widget):
     def __init__(self, win, text='Button'):
         super().__init__(win)
         self._text = text
+        self._tab_stop = True
 
     def render(self):
         super().render()

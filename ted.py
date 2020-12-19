@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 from geom import Point, Rect
 from menus import Menu, create_menu
 from doc import Document
@@ -11,21 +12,74 @@ from utils import call_by_name
 import config
 import traceback
 from dialogs.keymap_dialog import KeymapDialog
+from dialogs.prompt_dialog import PromptDialog
+from dialogs.file_dialog import FileDialog
 
 
 class Application(Screen):
     def __init__(self):
         super().__init__()
-        self.keylog = open('/tmp/keys', 'w')
         self.menu_bar = Menu('')
         self.shortcuts = {}
         self.views = []
+        self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
         self.focus = None
         self.terminating = False
 
-    def on_file_exit(self):
+    def event_loop(self, modal):
+        self._modal = modal
+        if modal:
+            self.render()
+        while self.process_input() and self._modal == modal:
+            self.render()
+            self.place_cursor()
+
+    def message_box(self, text):
+        self.focus = PromptDialog('Message', text, ['Ok'])
+        self.event_loop(True)
+
+    def action_file_exit(self):
+        if isinstance(self.focus, View):
+            doc = self.focus.get_doc()
+            if doc.is_modified():
+                d = PromptDialog('Exit', 'Save file?', ['Yes', 'No', 'Cancel'])
+                self.focus = d
+                self.event_loop(True)
+                r = d.get_result()
+                if r == 'Yes':
+                    if not self.action_file_save():
+                        return False
+                elif r == 'No':
+                    pass
+                else:
+                    return False
         self.terminating = True
+        return True
+
+    def action_file_save(self):
+        if isinstance(self.focus, View):
+            doc = self.focus.get_doc()
+            filename = doc.get_filename()
+            if not filename:
+                return self.action_file_save_as()
+            else:
+                doc.save()
+                self.render()
+            return True
+
+    def action_file_save_as(self):
+        if isinstance(self.focus, View):
+            focus: View = self.focus
+            d = FileDialog(False)
+            self.focus = d
+            self.event_loop(True)
+            r = d.get_result()
+            if r == 'Save':
+                focus.get_doc().save(d.get_path())
+                self.render()
+                return True
+        return False
 
     def set_menu(self, bar):
         self.menu_bar = bar
@@ -57,17 +111,18 @@ class Application(Screen):
         if hasattr(target, 'on_focus'):
             target.on_focus()
 
-    def close_menu(self):
+    def close_modal(self):
         self.set_focus(self.views[0])
+        self._modal = False
         self.cursor(True)
+
+    def modal_result(self, result):
+        pass
 
     def process_input(self):
         if self.terminating:
             return False
         key = self.getkey()
-        if self.keylog:
-            self.keylog.write(f'{type(key)}: n={len(key)}  "{key}"  {ord(key[-1])}\n')
-            self.keylog.flush()
         if key == 'KEY_F(12)':
             return False
         if self.process_shortcuts(key):
@@ -85,8 +140,6 @@ class Application(Screen):
 
     def on_action(self, action):
         func_name = f'action_{action}'
-        self.keylog.write(f'Action: {action}\n')
-        self.keylog.flush()
         if not call_by_name(self, func_name):
             if not call_by_name(self.focus, func_name):
                 if hasattr(self.focus, 'on_action'):
@@ -131,7 +184,7 @@ class Application(Screen):
 
 
 def message_box(text):
-    pass
+    config.get_app().message_box(text)
 
 
 def main():
@@ -143,6 +196,8 @@ def main():
     doc = Document(filename)
     doc.load(filename)
     w = Window(Point(app.width(), app.height()))
+    if filename:
+        w.set_title(os.path.basename(filename))
     app.window_manager.add_window(w)
     view = View(w, doc)
     app.set_menu(create_menu())
@@ -150,10 +205,9 @@ def main():
     app.render()
     view.redraw_all()
     error_report = ''
+    # noinspection PyBroadException
     try:
-        while app.process_input():
-            app.render()
-            app.place_cursor()
+        app.event_loop(False)
     except Exception:
         error_report = traceback.format_exc()
     app.close()

@@ -21,6 +21,9 @@ class Window:
         self._border = True
         self._title = ''
 
+    def disable_border(self):
+        self._border = False
+
     def set_title(self, title: str):
         self._title = title
 

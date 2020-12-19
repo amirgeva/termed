@@ -33,7 +33,6 @@ class Screen:
                          config.get_int('bg7', curses.COLOR_RED))
         self.box = '\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b'
         sys.stdout.write('\033]12;yellow\007')
-        self.keylog = None
         self.dbg = None  # open('screen.log', 'w')
 
     def width(self):

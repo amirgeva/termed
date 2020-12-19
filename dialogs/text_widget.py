@@ -20,6 +20,7 @@ class TextWidget(Widget):
         self._cursor = len(self._text)
         self.scroll()
         self.speak('modified')
+        return self
 
     def scroll(self):
         p = self._cursor - self._offset
@@ -29,10 +30,15 @@ class TextWidget(Widget):
     def set_editable(self, state):
         self._editable = state
         self._cursor_on = state
+        self._tab_stop = True
+        return self
 
     def process_key(self, key):
         if self._editable:
             self.set_text(self._text + key)
+
+    def action_enter(self):
+        self.speak('enter')
 
     def action_backspace(self):
         if self._editable and len(self._text) > 0:

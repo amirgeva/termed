@@ -7,6 +7,7 @@ class ListWidget(Widget):
         self._items = []
         self._offset = 0
         self._cur = 0
+        self._tab_stop = True
 
     def get_selection(self):
         if self._cur >= len(self._items):
@@ -60,3 +61,6 @@ class ListWidget(Widget):
         self.scroll()
         if prev != self._cur:
             self.speak('selection_changed')
+
+    def action_enter(self):
+        self.speak('selected')

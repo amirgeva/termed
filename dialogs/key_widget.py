@@ -9,6 +9,7 @@ class KeyWidget(Widget):
         self._text = ''
         self._code = False
         self._cursor_on = True
+        self._tab_stop = True
 
     @property
     def text(self):

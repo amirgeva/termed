@@ -22,6 +22,34 @@ class View(FocusTarget):
         self._last_x = 0
         self._redraw = True
         self._insert = True
+        self._tabs = []
+
+    def open_tab(self, doc: Document):
+        self._tabs.append(self._current_doc_settings())
+        self._doc = doc
+        self._visual_offset = Point(0, 0)
+        self._selection = None
+        self._cursor = Cursor()
+
+    def switch_tab(self, first: bool = True):
+        if len(self._tabs) == 0:
+            return
+        index = 0 if first else -1
+        tab = self._tabs[index]
+        del self._tabs[index]
+        if first:
+            self._tabs.append(self._current_doc_settings(tab))
+        else:
+            self._tabs.insert(0, self._current_doc_settings(tab))
+
+    def _current_doc_settings(self, tab: dict = None):
+        tab_fields = ['_doc', '_visual_offset', '_selection', '_cursor']
+        res = {}
+        for field in tab_fields:
+            res[field] = getattr(self, field)
+            if tab is not None:
+                setattr(self, field, tab.get(field))
+        return res
 
     def get_doc(self) -> Document:
         return self._doc

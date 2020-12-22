@@ -42,6 +42,22 @@ class View(FocusTarget):
         else:
             self._tabs.insert(0, self._current_doc_settings(tab))
 
+    def action_close_tab(self):
+        if len(self._tabs) > 0:
+            if not config.get_app().save_before_close([self._doc]):
+                return
+            tab = self._tabs[0]
+            del self._tabs[0]
+            self._current_doc_settings(tab)
+        else:
+            config.get_app().action_file_exit()
+
+    def get_all_docs(self):
+        res = [self._doc]
+        for tab in self.tabs:
+            res.append(tab.get('_doc'))
+        return res
+
     def _current_doc_settings(self, tab: dict = None):
         tab_fields = ['_doc', '_visual_offset', '_selection', '_cursor']
         res = {}
@@ -203,11 +219,27 @@ class View(FocusTarget):
             self.draw_line(y)
         self._window.set_cursor(self.doc2win(self._cursor))
 
-    def render(self):
+    def _render_tabs(self):
         title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
-        self._window.set_title(title)
+        # self._window.set_title(title)
+        if self._window.is_border():
+            titles = [(title, 2)]
+            for tab in self._tabs:
+                tab_doc = tab.get('_doc')
+                tab_title = tab_doc.get_filename() + (' *' if tab_doc.is_modified() else '')
+                titles.append((tab_title, 0))
+            x = 2
+            i = 0
+            while i < len(titles):
+                if (x + 3 + len(titles[i][0])) < self._window.width():
+                    self._window.draw_top_frame_text(x, titles[i][0], titles[i][1])
+                    x += 3 + len(titles[i][0])
+                i += 1
+
+    def render(self):
         self._window.set_footnote(0, f'{self._cursor.x + 1},{self._cursor.y + 1}')
         self._window.render()
+        self._render_tabs()
         self.redraw_all()
 
     def scroll_display(self):
@@ -371,3 +403,9 @@ class View(FocusTarget):
 
     def action_undo(self):
         self._doc.undo()
+
+    def action_next_tab(self):
+        self.switch_tab(True)
+
+    def action_prev_tab(self):
+        self.switch_tab(False)

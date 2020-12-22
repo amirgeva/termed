@@ -22,6 +22,9 @@ class Window:
         self._title = ''
         self._footnotes = {}
 
+    def is_border(self) -> bool:
+        return self._border
+
     def set_footnote(self, pos: int, text: str):
         self._footnotes[pos] = text
 
@@ -38,6 +41,9 @@ class Window:
 
     def set_rect(self, rect: Rect):
         self.rect = rect
+
+    def get_rect(self) -> Rect:
+        return self.rect
 
     def clear(self):
         get_app().fill_rect(self.rect, ' ', 0)
@@ -74,11 +80,14 @@ class Window:
             for order in sorted(self._footnotes.keys()):
                 text = self._footnotes.get(order)
                 x -= len(text) + 3
-                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text)
+                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text, 0)
 
     def render_title(self):
         if self._border:
-            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title)
+            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title, 0)
+
+    def draw_top_frame_text(self, pos: int, text: str, color: int):
+        get_app().draw_frame_text(self.rect.pos + Point(pos, 0), text, color)
 
     def subwindow(self, rect: Rect):
         rect.move(self.rect.top_left())

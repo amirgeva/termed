@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import sys
 import os
+from typing import List
+
 from geom import Point, Rect
 from menus import Menu, create_menu
 from doc import Document
@@ -41,9 +43,8 @@ class Application(Screen):
         self.focus = PromptDialog('Message', text, ['Ok'])
         self.event_loop(True)
 
-    def action_file_exit(self):
-        if isinstance(self.focus, View):
-            doc = self.focus.get_doc()
+    def save_before_close(self, docs: List[Document]):
+        for doc in docs:
             if doc.is_modified():
                 d = PromptDialog('Exit', 'Save file?', ['Yes', 'No', 'Cancel'])
                 self.focus = d
@@ -56,6 +57,12 @@ class Application(Screen):
                     pass
                 else:
                     return False
+        return True
+
+    def action_file_exit(self):
+        if isinstance(self.focus, View):
+            if not self.save_before_close(self.focus.get_all_docs()):
+                return False
         self.terminating = True
         return True
 
@@ -79,6 +86,19 @@ class Application(Screen):
             r = d.get_result()
             if r == 'Save':
                 focus.get_doc().save(d.get_path())
+                self.render()
+                return True
+        return False
+
+    def action_file_open(self):
+        if isinstance(self.focus, View):
+            focus: View = self.focus
+            d = FileDialog(True)
+            self.focus = d
+            self.event_loop(True)
+            r = d.get_result()
+            if r == 'Load':
+                focus.open_tab(Document(d.get_path()))
                 self.render()
                 return True
         return False
@@ -198,8 +218,6 @@ def main():
     doc = Document(filename)
     doc.load(filename)
     w = Window(Point(app.width(), app.height()))
-    if filename:
-        w.set_title(os.path.basename(filename))
     app.window_manager.add_window(w)
     view = View(w, doc)
     app.set_menu(create_menu())

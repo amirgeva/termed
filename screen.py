@@ -95,11 +95,11 @@ class Screen:
             self.write(self.box[7], color)
         self.write(self.box[8], color)
 
-    def draw_frame_text(self, pos: Point, text: str):
+    def draw_frame_text(self, pos: Point, text: str, color: int):
         self.move(pos)
-        self.write(self.tees[2], 0)
-        self.write(text, 0)
-        self.write(self.tees[1], 0)
+        self.write(self.tees[2], color)
+        self.write(text, color)
+        self.write(self.tees[1], color)
 
     def refresh(self):
         self.scr.refresh()

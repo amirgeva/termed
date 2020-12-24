@@ -54,7 +54,7 @@ class View(FocusTarget):
 
     def get_all_docs(self):
         res = [self._doc]
-        for tab in self.tabs:
+        for tab in self._tabs:
             res.append(tab.get('_doc'))
         return res
 

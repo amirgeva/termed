@@ -48,15 +48,15 @@ class Window:
     def clear(self):
         get_app().fill_rect(self.rect, ' ', 0)
 
-    def width(self):
+    def width(self) -> int:
         w = self.rect.width()
         return w - 2 if self._border else w
 
-    def height(self):
+    def height(self) -> int:
         h = self.rect.height()
         return h - 2 if self._border else h
 
-    def requested_size(self):
+    def requested_size(self) -> Point:
         return self.size_preference
 
     def set_cursor(self, *args):
@@ -65,10 +65,10 @@ class Window:
             p = p + Point(1, 1)
         get_app().move(self.rect.pos + p)
 
-    def set_color(self, color):
+    def set_color(self, color: int):
         self._color = color
 
-    def text(self, s):
+    def text(self, s: str):
         get_app().write(s, self._color)
 
     def render(self):

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-import os
 from typing import List
 
 from geom import Point, Rect

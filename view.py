@@ -54,7 +54,7 @@ class View(FocusTarget):
 
     def get_all_docs(self):
         res = [self._doc]
-        for tab in self.tabs:
+        for tab in self._tabs:
             res.append(tab.get('_doc'))
         return res
 
@@ -349,7 +349,7 @@ class View(FocusTarget):
 
     def action_move_eod(self):
         if self._doc:
-            m = self._doc.size() - self._cursor.y
+            m = self._doc.size() - self._cursor.y - 1
             n = self._doc.get_row(-1).get_logical_len() - self._cursor.x
             self.process_movement(Point(n, m), 0)
 

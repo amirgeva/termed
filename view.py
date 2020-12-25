@@ -16,6 +16,8 @@ class View(FocusTarget):
         super().__init__()
         self._window = window
         self._doc = doc
+        if doc:
+            doc.set_view(self)
         self._visual_offset = Point(0, 0)
         self._selection: Range = None
         self._cursor = Cursor()
@@ -317,6 +319,15 @@ class View(FocusTarget):
             self._redraw = True
         self._cursor = new_cursor
         self.scroll_display()
+
+    def get_cursor(self) -> Cursor:
+        return self._cursor
+
+    def set_cursor(self, cursor: Cursor):
+        if isinstance(cursor, Point):
+            self._cursor = Cursor(cursor.x, cursor.y)
+        elif isinstance(cursor, Cursor):
+            self._cursor = cursor
 
     def action_move_left(self):
         self.process_movement(Point(-1, 0), 0)

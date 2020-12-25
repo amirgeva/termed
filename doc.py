@@ -12,6 +12,7 @@ class Document:
         self._undo_stack = []
         self._undoing = False
         self._path = ''
+        self._view = None
         if filename:
             self.load(filename)
 
@@ -20,6 +21,9 @@ class Document:
 
     def get_path(self) -> str:
         return self._path
+
+    def set_view(self, view):
+        self._view = view
 
     def load(self, filename):
         try:
@@ -65,7 +69,7 @@ class Document:
         n = line.get_logical_len()
         x = min(cursor.x, n)
         if not self._undoing:
-            self._undo_stack.append([self.delete_block, cursor.y, x, x + len(text)])
+            self._undo_stack.append([self._view.get_cursor(), self.delete_block, cursor.y, x, x + len(text)])
         line.insert(x, text)
 
     def split_line(self, cursor: Cursor):
@@ -74,7 +78,7 @@ class Document:
         line = line.split(cursor.x)
         self.insert(line, cursor.y + 1)
         if not self._undoing:
-            self._undo_stack.append([self.join_next_row, cursor.y])
+            self._undo_stack.append([self._view.get_cursor(), self.join_next_row, cursor.y])
 
     def join_next_row(self, row_index: int):
         if 0 <= row_index < (self.rows_count() - 1):
@@ -82,7 +86,7 @@ class Document:
             next_row = self.get_row(row_index + 1)
             del self._lines[row_index + 1]
             if not self._undoing:
-                self._undo_stack.append([self.split_line, Cursor(row.get_logical_len(), row_index)])
+                self._undo_stack.append([self._view.get_cursor(), self.split_line, Cursor(row.get_logical_len(), row_index)])
             row.extend(next_row)
             self.set_modified(True)
 
@@ -91,7 +95,7 @@ class Document:
         if cursor.x < line.get_logical_len():
             self.set_modified(True)
             if not self._undoing:
-                self._undo_stack.append([self.insert_text, cursor, line.get_logical_text()[cursor.x]])
+                self._undo_stack.append([self._view.get_cursor(), self.insert_text, cursor, line.get_logical_text()[cursor.x]])
             line.erase(cursor.x)
         elif cursor.y < (self.size() - 1):
             self.set_modified(True)
@@ -114,7 +118,7 @@ class Document:
         if 0 <= index < len(self._lines):
             self.set_modified(True)
             if not self._undoing:
-                self._undo_stack.append([self.insert, self._lines[index], index])
+                self._undo_stack.append([self._view.get_cursor(), self.insert, self._lines[index], index])
             del self._lines[index]
 
     def delete_block(self, y: int, x0: int, x1: int):
@@ -126,7 +130,7 @@ class Document:
         x0, n = line.clip_coords(x0, n)
         if n > 0:
             if not self._undoing:
-                self._undo_stack.append([self.insert_text, Cursor(x0, y), line.get_logical_text()[x0:(x0 + n)]])
+                self._undo_stack.append([self._view.get_cursor(), self.insert_text, Cursor(x0, y), line.get_logical_text()[x0:(x0 + n)]])
             line.erase(x0, n)
 
     def insert(self, line: VisualLine, at: int):
@@ -178,8 +182,12 @@ class Document:
                 if cmd == '}':
                     depth -= 1
             else:
+                cursor = cmd[0]
+                del cmd[0]
                 f = cmd[0]
                 f(*cmd[1:])
+                if self._view:
+                    self._view.set_cursor(cursor)
             if depth == 0:
                 break
         self._undoing = False

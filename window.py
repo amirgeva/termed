@@ -2,6 +2,7 @@ from geom import Rect, Point
 from config import get_app
 from color import Color
 
+
 class Window:
     def __init__(self, *args):
         if len(args) == 1:
@@ -17,7 +18,7 @@ class Window:
         else:
             self.rect = Rect(0, 0, 5, 5)
             self.size_preference = Point(5, 5)
-        self._border = True
+        self._border = self.rect.height() > 2
         self._title = ''
         self._footnotes = {}
 

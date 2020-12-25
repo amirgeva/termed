@@ -16,6 +16,7 @@ from dialogs.keymap_dialog import KeymapDialog
 from dialogs.prompt_dialog import PromptDialog
 from dialogs.file_dialog import FileDialog
 from dialogs.color_dialog import ColorDialog
+from dialogs.find_dialog import FindDialog
 
 
 class Application(Screen):
@@ -101,6 +102,9 @@ class Application(Screen):
                 self.render()
                 return True
         return False
+
+    def action_find_replace(self):
+        self.focus = FindDialog()
 
     def set_menu(self, bar):
         self.menu_bar = bar

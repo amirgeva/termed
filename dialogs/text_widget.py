@@ -5,20 +5,22 @@ from color import Color
 
 
 class TextWidget(Widget):
-    def __init__(self, win):
+    def __init__(self, win, text: str = ''):
         super().__init__(win)
-        self._text = ''
+        self._text = text
         self._editable = False
         self._offset = 0
         self._cursor = 0
+        self._selected = False
         self._color = Color.TEXT
 
     @property
     def text(self):
         return self._text
 
-    def set_text(self, text):
+    def set_text(self, text, selected=False):
         self._text = text
+        self._selected = selected if len(text) > 0 else False
         self._cursor = len(self._text)
         self.scroll()
         self.speak('modified')
@@ -40,18 +42,21 @@ class TextWidget(Widget):
 
     def process_key(self, key):
         if self._editable:
-            self.set_text(self._text + key)
-
-    def action_enter(self):
-        self.speak('enter')
+            if self._selected:
+                self._text = ''
+            self.set_text(self._text + key, False)
 
     def action_backspace(self):
-        if self._editable and len(self._text) > 0:
-            self.set_text(self._text[0:-1])
+        if self._editable:
+            if self._selected:
+                self.set_text('')
+            elif len(self._text) > 0:
+                self.set_text(self._text[0:-1])
 
     def render(self):
         super().render()
         self._window.set_cursor(Point(0, 0))
         text = fit_text(self._text, self._window.width())
-        self._window.text(text, self._color)
+        color = Color.TEXT_HIGHLIGHT if self._selected else self._color
+        self._window.text(text, color)
         self._window.set_cursor(Point(self._cursor - self._offset, 0))

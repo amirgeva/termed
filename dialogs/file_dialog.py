@@ -30,11 +30,11 @@ class FileDialog(FormDialog):
 
         self.dir_list = ListWidget(self.subwin(3, 5, 23, 11))
         self.dir_list.set_title('Directories')
-        self.dir_list.listen('selected', self.selected_directory)
+        self.dir_list.listen('enter', self.selected_directory)
         self.add_widget(self.dir_list)
         self.file_list = ListWidget(self.subwin(27, 5, 30, 11))
         self.file_list.set_title('Files')
-        self.file_list.listen('selected', self.selected_file)
+        self.file_list.listen('enter', self.selected_file)
         self.add_widget(self.file_list)
         self.set_directory(os.getcwd())
 

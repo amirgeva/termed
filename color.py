@@ -4,3 +4,4 @@ class Color:
     FOCUS = 3
     BORDER = 4
     BORDER_HIGHLIGHT = 5
+    ERROR = 7

@@ -46,6 +46,8 @@ class ColorDialog(FormDialog):
         self.add_widget(self._background_list)
         self._set_current_pair()
 
+        self.set_focus(self._pair_list)
+
     def _set_current_pair(self):
         self._current_pair = self._pair_list.get_selection()[1] + 1
         pair = self._query(self._current_pair)

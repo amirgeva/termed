@@ -60,3 +60,7 @@ class Widget(FocusTarget):
     def render(self):
         self._window.render()
         return self
+
+    def action_enter(self):
+        self.speak('enter')
+

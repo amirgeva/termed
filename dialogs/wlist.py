@@ -67,5 +67,3 @@ class ListWidget(Widget):
         if prev != self._cur:
             self.speak('selection_changed')
 
-    def action_enter(self):
-        self.speak('selected')

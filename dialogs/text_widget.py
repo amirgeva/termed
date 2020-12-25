@@ -1,6 +1,7 @@
 from dialogs.widget import Widget
 from geom import Point
 from utils import fit_text
+from color import Color
 
 
 class TextWidget(Widget):
@@ -10,6 +11,7 @@ class TextWidget(Widget):
         self._editable = False
         self._offset = 0
         self._cursor = 0
+        self._color = Color.TEXT
 
     @property
     def text(self):
@@ -21,6 +23,9 @@ class TextWidget(Widget):
         self.scroll()
         self.speak('modified')
         return self
+
+    def set_color(self, color):
+        self._color = color
 
     def scroll(self):
         p = self._cursor - self._offset
@@ -48,5 +53,5 @@ class TextWidget(Widget):
         super().render()
         self._window.set_cursor(Point(0, 0))
         text = fit_text(self._text, self._window.width())
-        self._window.text(text)
+        self._window.text(text, self._color)
         self._window.set_cursor(Point(self._cursor - self._offset, 0))

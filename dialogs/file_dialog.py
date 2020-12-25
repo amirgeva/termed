@@ -1,5 +1,4 @@
 import os
-from typing import List
 from window import Window
 from dialogs.dialog import FormDialog
 from dialogs.text_widget import TextWidget

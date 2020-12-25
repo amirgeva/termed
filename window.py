@@ -1,6 +1,6 @@
 from geom import Rect, Point
 from config import get_app
-
+from color import Color
 
 class Window:
     def __init__(self, *args):
@@ -17,7 +17,6 @@ class Window:
         else:
             self.rect = Rect(0, 0, 5, 5)
             self.size_preference = Point(5, 5)
-        self._color = 0
         self._border = True
         self._title = ''
         self._footnotes = {}
@@ -46,7 +45,7 @@ class Window:
         return self.rect
 
     def clear(self):
-        get_app().fill_rect(self.rect, ' ', 0)
+        get_app().fill_rect(self.rect, ' ', Color.BORDER)
 
     def width(self) -> int:
         w = self.rect.width()
@@ -65,26 +64,23 @@ class Window:
             p = p + Point(1, 1)
         get_app().move(self.rect.pos + p)
 
-    def set_color(self, color: int):
-        self._color = color
-
-    def text(self, s: str):
-        get_app().write(s, self._color)
+    def text(self, s: str, color: int):
+        get_app().write(s, color)
 
     def render(self):
         if self._border:
-            get_app().draw_frame(self.rect, 0)
+            get_app().draw_frame(self.rect, Color.BORDER)
             if len(self._title) > 0:
                 self.render_title()
             x = self.width() - 2
             for order in sorted(self._footnotes.keys()):
                 text = self._footnotes.get(order)
                 x -= len(text) + 3
-                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text, 0)
+                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text, Color.BORDER)
 
     def render_title(self):
         if self._border:
-            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title, 0)
+            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title, Color.BORDER)
 
     def draw_top_frame_text(self, pos: int, text: str, color: int):
         get_app().draw_frame_text(self.rect.pos + Point(pos, 0), text, color)

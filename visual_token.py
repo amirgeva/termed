@@ -1,8 +1,11 @@
+from color import Color
+
+
 class VisualToken:
     def __init__(self, pos: int, text: str):
         self._pos = pos
         self._text = text
-        self._color = 0
+        self._color = Color.TEXT
 
     def set_color(self, color: int):
         self._color = color

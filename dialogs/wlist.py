@@ -1,4 +1,5 @@
 from dialogs.widget import Widget
+from color import Color
 
 
 class ListWidget(Widget):
@@ -13,6 +14,10 @@ class ListWidget(Widget):
         if self._cur >= len(self._items):
             return '', -1
         return self._items[self._cur], self._cur
+
+    def set_selection(self, index: int):
+        if 0 <= index < len(self._items):
+            self._cur = index
 
     def clear(self):
         self._items = []
@@ -31,13 +36,13 @@ class ListWidget(Widget):
             text = ' ' * w
             if i < len(self._items):
                 text = self._items[i]
-            highlight = 1 if self.is_focus() else 2
-            self._window.set_color(0 if i != self._cur else highlight)
+            highlight = Color.FOCUS if self.is_focus() else Color.TEXT_HIGHLIGHT
+            color = Color.TEXT if i != self._cur else highlight
             if len(text) > w:
                 text = text[0:w]
             if len(text) < w:
                 text = text + ' ' * (w - len(text))
-            self._window.text(text)
+            self._window.text(text, color)
 
     def scroll(self):
         y = self._cur - self._offset

@@ -1,6 +1,7 @@
 from dialogs.widget import Widget
 from geom import Point
 from utils import center_text
+from color import Color
 
 
 class Button(Widget):
@@ -13,8 +14,8 @@ class Button(Widget):
         super().render()
         self._window.set_cursor(Point(0, 0))
         text = center_text(self._text, self._window.width())
-        self._window.set_color(1 if self.is_focus() else 0)
-        self._window.text(text)
+        color = Color.FOCUS if self.is_focus() else Color.TEXT
+        self._window.text(text, color)
 
     def action_enter(self):
         self.speak('clicked')

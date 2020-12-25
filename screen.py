@@ -17,6 +17,8 @@ class Screen:
         self.rect = Rect(0, 0, self.size[0], self.size[1])
         curses.start_color()
         curses.use_default_colors()
+        self._color_names = sorted(['BLACK', 'WHITE', 'RED', 'YELLOW', 'BLUE', 'CYAN', 'MAGENTA', 'GREEN'],
+                                   key=lambda c: getattr(curses, f'COLOR_{c}'))
         curses.init_pair(1, config.get_int('fg1', curses.COLOR_YELLOW),
                          config.get_int('bg1', curses.COLOR_BLUE))
         curses.init_pair(2, config.get_int('fg2', curses.COLOR_WHITE),
@@ -35,6 +37,16 @@ class Screen:
         self.tees = '\u2533\u2523\u252b\u253b\u254b'
         sys.stdout.write('\033]12;yellow\007')
         self.dbg = None  # open('screen.log', 'w')
+
+    def update_color(self, color):
+        curses.init_pair(color, config.get_int(f'fg{color}', curses.COLOR_YELLOW),
+                         config.get_int(f'bg{color}', curses.COLOR_BLUE))
+
+    def get_color_names(self):
+        return self._color_names
+
+    def query_colors(self, pair):
+        return curses.pair_content(pair)
 
     def width(self):
         return self.size[0]

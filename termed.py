@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 from typing import List
-
 from geom import Point, Rect
 from menus import Menu, create_menu
 from doc import Document
@@ -16,6 +15,7 @@ from focus import FocusTarget
 from dialogs.keymap_dialog import KeymapDialog
 from dialogs.prompt_dialog import PromptDialog
 from dialogs.file_dialog import FileDialog
+from dialogs.color_dialog import ColorDialog
 
 
 class Application(Screen):
@@ -202,6 +202,9 @@ class Application(Screen):
 
     def action_keymap_dialog(self):
         self.set_focus(KeymapDialog())
+
+    def action_colors(self):
+        self.set_focus(ColorDialog())
 
 
 def message_box(text):

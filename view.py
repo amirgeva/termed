@@ -7,6 +7,7 @@ from geom import Point, Range
 from focus import FocusTarget
 from window import Window
 from doc import Document
+from color import Color
 import pyperclip
 
 
@@ -163,7 +164,7 @@ class View(FocusTarget):
         res = []
         if self._selection:
             start, stop = self._selection.get_ordered()
-            sel_highlight = 1
+            sel_highlight = Color.TEXT_HIGHLIGHT
             if start.y <= y <= stop.y:
                 from_i = 0 if start.y < y else line.get_visual_index(start.x)
                 to_i = len(text) if stop.y > y else line.get_visual_index(stop.x)
@@ -188,9 +189,8 @@ class View(FocusTarget):
     def draw_line(self, y: int):
         line_index = y + self._visual_offset.y
         if line_index >= self._doc.size():
-            self._window.set_color(0)
             self._window.set_cursor(0, y)
-            self._window.text(' ' * self._window.width())
+            self._window.text(' ' * self._window.width(), Color.TEXT)
             return
         line = self._doc.get_row(line_index)
         tokens = self.add_highlights(line_index, line)
@@ -204,16 +204,14 @@ class View(FocusTarget):
             text = token.get_text()
             if len(text) > 0:
                 self._window.set_cursor(token.get_pos(), y)
-                self._window.set_color(token.get_color())
-                self._window.text(text)
+                self._window.text(text, token.get_color())
                 cx = cx + len(text)
         if cx < self.width():
             self._window.set_cursor(cx, y)
             color = 0
             if len(tokens) > 0:
                 color = tokens[-1].get_color()
-            self._window.set_color(color)
-            self._window.text(' ' * (self.width() - cx))
+            self._window.text(' ' * (self.width() - cx), color)
 
     def redraw_all(self):
         # self.window.clear()
@@ -225,11 +223,11 @@ class View(FocusTarget):
         title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
         # self._window.set_title(title)
         if self._window.is_border():
-            titles = [(title, 2)]
+            titles = [(title, Color.BORDER_HIGHLIGHT)]
             for tab in self._tabs:
                 tab_doc = tab.get('_doc')
                 tab_title = tab_doc.get_filename() + (' *' if tab_doc.is_modified() else '')
-                titles.append((tab_title, 0))
+                titles.append((tab_title, Color.BORDER))
             x = 2
             i = 0
             while i < len(titles):

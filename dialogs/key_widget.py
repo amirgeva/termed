@@ -1,6 +1,7 @@
 from dialogs.widget import Widget
 from geom import Point
 from utils import fit_text
+from color import Color
 
 
 class KeyWidget(Widget):
@@ -37,5 +38,5 @@ class KeyWidget(Widget):
         super().render()
         self._window.set_cursor(Point(0, 0))
         text = fit_text(self._text, self._window.width())
-        self._window.text(text)
+        self._window.text(text, Color.TEXT)
         self._window.set_cursor(Point(0, 0))

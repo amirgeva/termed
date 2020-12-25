@@ -30,6 +30,7 @@ class View(FocusTarget):
     def open_tab(self, doc: Document):
         self._tabs.append(self._current_doc_settings())
         self._doc = doc
+        doc.set_view(self)
         self._visual_offset = Point(0, 0)
         self._selection = None
         self._cursor = Cursor()
@@ -406,9 +407,11 @@ class View(FocusTarget):
             pyperclip.copy(text)
 
     def action_paste(self):
+        self._doc.start_compound()
         self.delete_selection()
         text = pyperclip.paste()
         self.insert_text(text)
+        self._doc.stop_compound()
 
     def action_undo(self):
         self._doc.undo()

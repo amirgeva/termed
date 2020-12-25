@@ -5,6 +5,12 @@ from geom import Point
 from cursor import Cursor
 
 
+class Compound:
+    def __init__(self, start: bool, cursor: Cursor = None):
+        self.start = start
+        self.cursor = Cursor(cursor.x, cursor.y)
+
+
 class Document:
     def __init__(self, filename):
         self._lines: List[VisualLine] = [VisualLine('')]
@@ -86,7 +92,8 @@ class Document:
             next_row = self.get_row(row_index + 1)
             del self._lines[row_index + 1]
             if not self._undoing:
-                self._undo_stack.append([self._view.get_cursor(), self.split_line, Cursor(row.get_logical_len(), row_index)])
+                self._undo_stack.append(
+                    [self._view.get_cursor(), self.split_line, Cursor(row.get_logical_len(), row_index)])
             row.extend(next_row)
             self.set_modified(True)
 
@@ -95,7 +102,8 @@ class Document:
         if cursor.x < line.get_logical_len():
             self.set_modified(True)
             if not self._undoing:
-                self._undo_stack.append([self._view.get_cursor(), self.insert_text, cursor, line.get_logical_text()[cursor.x]])
+                self._undo_stack.append(
+                    [self._view.get_cursor(), self.insert_text, cursor, line.get_logical_text()[cursor.x]])
             line.erase(cursor.x)
         elif cursor.y < (self.size() - 1):
             self.set_modified(True)
@@ -130,7 +138,8 @@ class Document:
         x0, n = line.clip_coords(x0, n)
         if n > 0:
             if not self._undoing:
-                self._undo_stack.append([self._view.get_cursor(), self.insert_text, Cursor(x0, y), line.get_logical_text()[x0:(x0 + n)]])
+                self._undo_stack.append(
+                    [self._view.get_cursor(), self.insert_text, Cursor(x0, y), line.get_logical_text()[x0:(x0 + n)]])
             line.erase(x0, n)
 
     def insert(self, line: VisualLine, at: int):
@@ -161,11 +170,11 @@ class Document:
 
     def start_compound(self):
         if not self._undoing:
-            self._undo_stack.append('{')
+            self._undo_stack.append(Compound(True, self._view.get_cursor()))
 
     def stop_compound(self):
         if not self._undoing:
-            self._undo_stack.append('}')
+            self._undo_stack.append(Compound(False, self._view.get_cursor()))
 
     def undo(self):
         depth = 0
@@ -176,19 +185,17 @@ class Document:
         while len(self._undo_stack) > 0:
             cmd = self._undo_stack[-1]
             del self._undo_stack[-1]
-            if isinstance(cmd, str):
-                if cmd == '{':
-                    depth += 1
-                if cmd == '}':
-                    depth -= 1
+            if isinstance(cmd, Compound):
+                depth += 1 if cmd.start else -1
+                if cmd.start and depth == 0:
+                    self._view.set_cursor(cmd.cursor)
+                    break
             else:
                 cursor = cmd[0]
                 del cmd[0]
                 f = cmd[0]
                 f(*cmd[1:])
-                if self._view:
+                if self._view and depth == 0:
                     self._view.set_cursor(cursor)
-            if depth == 0:
-                break
         self._undoing = False
         return res

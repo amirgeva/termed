@@ -41,7 +41,7 @@ class TextWidget(Widget):
         return self
 
     def process_key(self, key):
-        if self._editable:
+        if self._editable and len(key)==1:
             if self._selected:
                 self._text = ''
             self.set_text(self._text + key, False)

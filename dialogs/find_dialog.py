@@ -1,3 +1,4 @@
+import re
 from window import Window
 from dialogs.dialog import FormDialog
 from dialogs.text_widget import TextWidget
@@ -15,6 +16,19 @@ class FindOptions:
         self.case = config.get_bool('find_case')
         self.whole = config.get_bool('find_whole')
         self.regex = config.get_bool('find_regex')
+        self.regex_pattern = None
+        self.update_regex()
+
+    def update_regex(self):
+        self.regex_pattern = None
+        if self.regex and self.find_text:
+            flags = 0
+            if not self.case:
+                flags = re.IGNORECASE
+            try:
+                self.regex_pattern = re.compile(self.find_text, flags)
+            except re.error:
+                pass
 
     def save(self):
         config.set_value('last_find', self.find_text)
@@ -80,3 +94,4 @@ class FindDialog(FormDialog):
         self.options.case = self._case.get_state()
         self.options.whole = self._whole.get_state()
         self.options.regex = self._regex.get_state()
+        self.options.update_regex()

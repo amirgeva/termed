@@ -1,3 +1,4 @@
+import re
 from typing import List
 from cursor import Cursor
 from visual_token import VisualToken
@@ -335,31 +336,43 @@ class View(FocusTarget):
         self._find_options = options
         self.action_find_replace_next()
 
+    def _find_regex_in_row(self, row_text: str, find_text: str, from_x: int):
+        m = self._find_options.regex_pattern.search(row_text, from_x)
+        if m:
+            return m.start()
+        return -1
+
+    def _find_in_row(self, row_text: str, find_text: str, from_x: int):
+        if self._find_options.regex:
+            return self._find_regex_in_row(row_text, find_text, from_x)
+        if not self._find_options.case:
+            row_text = row_text.upper()
+            find_text = find_text.upper()
+        try:
+            return row_text.index(find_text, from_x)
+        except ValueError:
+            return -1
+
     def _find_next(self):
         y = self._cursor.y
         x = self._cursor.x
         find_text = self._find_options.find_text
-        if not self._find_options.case:
-            find_text = find_text.upper()
         while y < self._doc.size():
             row = self._doc.get_row(y)
             text = row.get_logical_text()
-            if not self._find_options.case:
-                text = text.upper()
-            try:
-                while True:
-                    x = text.index(find_text, x + 1)
-                    found = True
-                    if self._find_options.whole:
-                        if x > 0 and text[x - 1].isalnum():
-                            found = False
-                        if (x + len(find_text)) < len(text) and text[x + len(find_text)].isalnum():
-                            found = False
-                    if found:
-                        self.set_cursor(Cursor(x, y))
-                        return True
-            except ValueError:
-                pass
+            while True:
+                x = self._find_in_row(text, find_text, x + 1)
+                if x < 0:
+                    break
+                found = True
+                if self._find_options.whole:
+                    if x > 0 and text[x - 1].isalnum():
+                        found = False
+                    if (x + len(find_text)) < len(text) and text[x + len(find_text)].isalnum():
+                        found = False
+                if found:
+                    self.set_cursor(Cursor(x, y))
+                    return True
             y = y + 1
             x = 0
         return False

@@ -104,7 +104,13 @@ class Application(Screen):
         return False
 
     def action_find_replace(self):
-        self.focus = FindDialog()
+        d = FindDialog()
+        self.focus = d
+        self.event_loop(True)
+        r = d.get_result()
+        if r and r != 'Close':
+            if isinstance(self.focus, View):
+                self.focus.find_replace(d.options)
 
     def set_menu(self, bar):
         self.menu_bar = bar

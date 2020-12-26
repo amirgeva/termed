@@ -2,6 +2,7 @@ from typing import List
 from cursor import Cursor
 from visual_token import VisualToken
 from visual_line import VisualLine
+from dialogs.find_dialog import FindOptions
 import config
 from geom import Point, Range
 from focus import FocusTarget
@@ -21,6 +22,7 @@ class View(FocusTarget):
             doc.set_view(self)
         self._visual_offset = Point(0, 0)
         self._selection: Range = None
+        self._find_options: FindOptions = None
         self._cursor = Cursor()
         self._last_x = 0
         self._redraw = True
@@ -149,7 +151,7 @@ class View(FocusTarget):
 
     def action_enter(self):
         self._doc.split_line(self._cursor)
-        self._cursor = Cursor(0, self._cursor.y + 1)
+        self.set_cursor(Cursor(0, self._cursor.y + 1))
         self.redraw_all()
 
     def action_delete(self):
@@ -158,7 +160,7 @@ class View(FocusTarget):
 
     def action_backspace(self):
         if not self.delete_selection():
-            self._cursor = self._doc.backspace(self._cursor)
+            self.set_cursor(self._doc.backspace(self._cursor))
 
     def add_highlights(self, y: int, line: VisualLine) -> List[VisualToken]:
         text = line.get_visual_text()
@@ -282,7 +284,7 @@ class View(FocusTarget):
                 self._doc.delete_line(start.y + dstart)
             if start.x > 0:
                 self._doc.join_next_row(start.y)
-        self._cursor = start
+        self.set_cursor(start)
         self._doc.stop_compound()
         self._selection = None
         return True
@@ -316,7 +318,7 @@ class View(FocusTarget):
         if self._selection is not None:
             self._selection.extend(new_cursor)
             self._redraw = True
-        self._cursor = new_cursor
+        self.set_cursor(new_cursor)
         self.scroll_display()
 
     def get_cursor(self) -> Cursor:
@@ -327,6 +329,58 @@ class View(FocusTarget):
             self._cursor = Cursor(cursor.x, cursor.y)
         elif isinstance(cursor, Cursor):
             self._cursor = cursor
+        self.scroll_display()
+
+    def find_replace(self, options: FindOptions):
+        self._find_options = options
+        self.action_find_replace_next()
+
+    def _find_next(self):
+        y = self._cursor.y
+        x = self._cursor.x
+        find_text = self._find_options.find_text
+        if not self._find_options.case:
+            find_text = find_text.upper()
+        while y < self._doc.size():
+            row = self._doc.get_row(y)
+            text = row.get_logical_text()
+            if not self._find_options.case:
+                text = text.upper()
+            try:
+                while True:
+                    x = text.index(find_text, x + 1)
+                    found = True
+                    if self._find_options.whole:
+                        if x > 0 and text[x - 1].isalnum():
+                            found = False
+                        if (x + len(find_text)) < len(text) and text[x + len(find_text)].isalnum():
+                            found = False
+                    if found:
+                        self.set_cursor(Cursor(x, y))
+                        return True
+            except ValueError:
+                pass
+            y = y + 1
+            x = 0
+        return False
+
+    def action_find_replace_next(self):
+        if self._find_options is None or not self._find_options.find_text:
+            return
+        action = self._find_options.action
+        replace = (action == 'Replace')
+        replace_all = (action == 'Replace All')
+        if replace or replace_all:
+            self._doc.start_compound()
+        while self._find_next():
+            if action == 'Find':
+                break
+            if replace or replace_all:
+                self._doc.replace_text(self._cursor, self._find_options.replace_text, len(self._find_options.find_text))
+                if replace:
+                    break
+        if replace or replace_all:
+            self._doc.stop_compound()
 
     def action_move_left(self):
         self.process_movement(Point(-1, 0), 0)

@@ -5,9 +5,9 @@ from color import Color
 
 
 class CheckboxWidget(Widget):
-    def __init__(self, win: Window):
+    def __init__(self, win: Window, on: bool = False):
         super().__init__(win)
-        self._on = False
+        self._on = on
         self._tab_stop = True
         win.disable_border()
 
@@ -18,6 +18,9 @@ class CheckboxWidget(Widget):
         self._window.text('[', Color.BORDER)
         self._window.text('X' if self._on else ' ', color)
         self._window.text(']', Color.BORDER)
+
+    def get_state(self) -> bool:
+        return self._on
 
     def set_state(self, state: bool):
         self._on = state

@@ -159,9 +159,11 @@ class Document:
             x = row.get_logical_len()
         return Point(x, cursor.y)
 
-    def replace_text(self, cursor: Cursor, text: str):
+    def replace_text(self, cursor: Cursor, text: str, replace_count: int = -1):
         line = self._lines[cursor.y]
-        replace_count = min(line.get_logical_len() - cursor.x, len(text))
+        if replace_count < 0:
+            replace_count = len(text)
+        replace_count = min(line.get_logical_len() - cursor.x, replace_count)
         self.start_compound()
         self.delete_block(cursor.y, cursor.x, cursor.x + replace_count)
         self.insert_text(cursor, text)
@@ -174,7 +176,13 @@ class Document:
 
     def stop_compound(self):
         if not self._undoing:
-            self._undo_stack.append(Compound(False, self._view.get_cursor()))
+            if len(self._undo_stack) == 0:
+                return
+            last = self._undo_stack[-1]
+            if isinstance(last, Compound) and last.start:
+                del self._undo_stack[-1]
+            else:
+                self._undo_stack.append(Compound(False, self._view.get_cursor()))
 
     def undo(self):
         depth = 0

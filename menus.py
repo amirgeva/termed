@@ -2,6 +2,7 @@ from geom import Point, Rect
 from config import get_app
 from focus import FocusTarget
 
+
 # from screen import Screen
 
 
@@ -11,14 +12,17 @@ class MenuItem(object):
         self.app = app
         self.action = action
         self.key = ''
-        p = title.index('&')
-        if 0 <= p < (len(title) - 1):
-            self.key = title[p + 1]
+        try:
+            p = title.index('&')
+            if 0 <= p < (len(title) - 1):
+                self.key = title[p + 1].upper()
+        except ValueError:
+            pass
 
     def activate(self):
         if self.app is not None and self.action is not None:
+            self.app.close_modal()
             self.app.on_action(self.action)
-
 
 
 class Menu(FocusTarget):
@@ -46,9 +50,9 @@ class Menu(FocusTarget):
         self.items.append(item)
         self.width = max(self.width, 2 + len(item.title) - item.title.count('&'))
 
-    def on_key(self, key):
+    def process_key(self, key: str):
         for item in self.items:
-            if item.key == key:
+            if item.key == key.upper():
                 item.activate()
                 return True
         return False
@@ -162,9 +166,10 @@ def create_menu():
                        ]),
             ('&Options', [('&Colors', app, 'colors'),
                           ('&Editor', app, 'cfg_editor'),
-                          ('&Key Mapping', app, 'keymap_dialog')
+                          ('&Key Mapping', app, 'keymap_dialog'),
+                          ('&Plugins', app, 'plugins')
                           ]),
-            ('&Help', [('&About', app, 'help_about'),
+            ('&Help', [('&About', app, 'about'),
                        ]),
             ]
     bar = Menu('')

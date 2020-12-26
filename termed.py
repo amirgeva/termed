@@ -17,6 +17,7 @@ from dialogs.prompt_dialog import PromptDialog
 from dialogs.file_dialog import FileDialog
 from dialogs.color_dialog import ColorDialog
 from dialogs.find_dialog import FindDialog
+from dialogs.plugins_dialog import PluginsDialog
 
 
 class Application(Screen):
@@ -90,6 +91,11 @@ class Application(Screen):
                 return True
         return False
 
+    def action_file_new(self):
+        if isinstance(self.focus, View):
+            self.focus.open_tab(Document(''))
+            self.render()
+
     def action_file_open(self):
         if isinstance(self.focus, View):
             focus: View = self.focus
@@ -111,6 +117,25 @@ class Application(Screen):
         if r and r != 'Close':
             if isinstance(self.focus, View):
                 self.focus.find_replace(d.options)
+
+    def action_plugins(self):
+        if not config.plugins_exist():
+            d = PromptDialog('Plugins', 'Clone Plugins?', ['Yes', 'No'])
+            self.focus = d
+            self.event_loop(True)
+            if d.get_result() == 'Yes':
+                if not config.clone_plugins():
+                    self.focus = PromptDialog('Error', 'Failed to clone plugins', ['Ok'])
+                    self.event_loop(True)
+                    return
+        d = PluginsDialog()
+        self.focus = d
+        self.event_loop(True)
+        if d.get_result() == 'Ok':
+            self.rescan_plugins()
+
+    def rescan_plugins(self):
+        pass
 
     def set_menu(self, bar):
         self.menu_bar = bar

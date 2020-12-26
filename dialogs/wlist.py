@@ -1,3 +1,5 @@
+from typing import Tuple, List
+
 from dialogs.widget import Widget
 from color import Color
 
@@ -10,7 +12,10 @@ class ListWidget(Widget):
         self._cur = 0
         self._tab_stop = True
 
-    def get_selection(self):
+    def get_items(self) -> List[str]:
+        return list(self._items)
+
+    def get_selection(self) -> Tuple[str, int]:
         if self._cur >= len(self._items):
             return '', -1
         return self._items[self._cur], self._cur
@@ -24,8 +29,18 @@ class ListWidget(Widget):
         self._offset = 0
         self._cur = 0
 
-    def add_item(self, item):
+    def add_item(self, item: str):
         self._items.append(item)
+
+    def remove_item(self, item):
+        if isinstance(item, int) and 0 <= item < len(self._items):
+            del self._items[item]
+        elif isinstance(item, str):
+            try:
+                i = self._items.index(item)
+                del self._items[i]
+            except ValueError:
+                pass
 
     def render(self):
         super().render()
@@ -66,4 +81,3 @@ class ListWidget(Widget):
         self.scroll()
         if prev != self._cur:
             self.speak('selection_changed')
-

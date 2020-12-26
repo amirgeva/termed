@@ -1,6 +1,8 @@
 import os
 import atexit
 import json
+from typing import List
+import subprocess
 from utils import ctrl
 from configparser import ConfigParser
 
@@ -97,6 +99,7 @@ home = os.environ['HOME']
 cfg_dir = os.path.join(home, '.termed')
 os.makedirs(cfg_dir, 0o755, True)
 cfg_path = os.path.join(cfg_dir, 'termed.ini')
+plugins_dir = os.path.join(cfg_dir, 'plugins')
 keymap_path = os.path.join(cfg_dir, 'keymap.json')
 cfg = ConfigParser()
 cfg.read(cfg_path)
@@ -104,8 +107,8 @@ if 'config' not in cfg:
     cfg['config'] = {}
 section = cfg['config']
 if os.path.exists(keymap_path):
-    with open(keymap_path) as f:
-        keymap = json.load(f)
+    with open(keymap_path) as fi:
+        keymap = json.load(fi)
 else:
     keymap = generate_default_keymap(keymap_path)
 
@@ -123,9 +126,32 @@ def save_keymap():
         json.dump(keymap, fo, indent=4)
 
 
-def get_assigned_key(action):
+def get_assigned_key(action) -> str:
     for key in sorted(keymap.keys()):
         key_action = keymap.get(key)
         if action == key_action:
             return key
     return ''
+
+
+def plugins_exist() -> bool:
+    return os.path.exists(plugins_dir)
+
+
+def clone_plugins() -> bool:
+    try:
+        cmd = ['git', 'clone', 'https://github.com/amirgeva/termed_plugins', plugins_dir]
+        subprocess.run(args=cmd, capture_output=True, check=True)
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
+def get_installed_plugins() -> List[str]:
+    try:
+        files = os.listdir(plugins_dir)
+        files = [f for f in files if os.path.isdir(f)]
+        files = [f for f in files if os.path.exists(os.path.join(f, '__init__.py'))]
+        return files
+    except FileNotFoundError:
+        return []

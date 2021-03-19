@@ -20,7 +20,7 @@ class PluginsDialog(FormDialog):
         self._active_list.set_title('Active Plugins')
         self._active_list.listen('enter', self.deactivate_plugin)
         self.add_widget(self._active_list)
-        active_plugins = config.get_value('active_plugins')
+        active_plugins = config.get_value('active_plugins').split('\n')
         for p in active_plugins:
             self._active_list.add_item(p)
 
@@ -28,9 +28,10 @@ class PluginsDialog(FormDialog):
         name = self._plugins_list.get_selection()[0]
         if name not in self._active_list.get_items():
             self._active_list.add_item(name)
-            config.set_value('active_plugins', self._active_list.get_items())
 
     def deactivate_plugin(self):
         index = self._active_list.get_selection()[1]
         self._active_list.remove_item(index)
-        config.set_value('active_plugins', self._active_list.get_items())
+
+    def get_active_plugins(self):
+        return self._active_list.get_items()

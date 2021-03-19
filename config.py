@@ -1,4 +1,5 @@
 import os
+import sys
 import atexit
 import json
 from typing import List
@@ -59,6 +60,10 @@ def generate_default_keymap(path: str):
     with open(path, 'w') as fo:
         json.dump(mapping, fo, indent=4)
     return mapping
+
+
+def get_section(name: str):
+    return cfg[name]
 
 
 def get_value(name, default=''):
@@ -138,6 +143,22 @@ def plugins_exist() -> bool:
     return os.path.exists(plugins_dir)
 
 
+def verify_plugins_path():
+    if cfg_dir not in sys.path:
+        sys.path.append(cfg_dir)
+
+
+def create_plugin(name: str):
+    if not plugins_exist():
+        return None
+    verify_plugins_path()
+    import importlib
+    m = importlib.__import__(f'plugins.{name}')
+    m = getattr(m, name)
+    f = getattr(m, 'create')
+    return f()
+
+
 def clone_plugins() -> bool:
     try:
         cmd = ['git', 'clone', 'https://github.com/amirgeva/termed_plugins', plugins_dir]
@@ -150,8 +171,8 @@ def clone_plugins() -> bool:
 def get_installed_plugins() -> List[str]:
     try:
         files = os.listdir(plugins_dir)
-        files = [f for f in files if os.path.isdir(f)]
-        files = [f for f in files if os.path.exists(os.path.join(f, '__init__.py'))]
+        files = [f for f in files if os.path.isdir(os.path.join(plugins_dir, f))]
+        files = [f for f in files if os.path.exists(os.path.join(plugins_dir, f, '__init__.py'))]
         return files
     except FileNotFoundError:
         return []

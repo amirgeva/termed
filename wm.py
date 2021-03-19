@@ -57,7 +57,7 @@ class WindowManager:
             rects[i].move(Point(-reduction, 0))
         if bottom_index > 0:
             height = rects[-1].bottom()
-            reduction = height - self.rect.height()
+            reduction = height - self.rect.height() - 1
             for i in range(bottom_index):
                 rects[i].size.y -= reduction
             for i in range(bottom_index, len(rects)):

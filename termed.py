@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys
-from typing import List
+from typing import List, Dict
 from geom import Point, Rect
 from menus import Menu, create_menu
 from doc import Document
@@ -9,9 +9,11 @@ from screen import Screen
 from window import Window
 from wm import WindowManager
 from utils import call_by_name
+from plugin import *
 import config
 import traceback
 from focus import FocusTarget
+from dialogs.dialog import Dialog
 from dialogs.keymap_dialog import KeymapDialog
 from dialogs.prompt_dialog import PromptDialog
 from dialogs.file_dialog import FileDialog
@@ -30,7 +32,9 @@ class Application(Screen):
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
         self.focus = None
         self.terminating = False
+        self.active_plugins: Dict[str, Plugin] = {}
         FocusTarget.add(self)
+        # self.activate_plugins()
 
     def event_loop(self, modal):
         self._modal = modal
@@ -39,6 +43,10 @@ class Application(Screen):
         while self.process_input() and self._modal == modal:
             self.render()
             self.place_cursor()
+
+    def modal_dialog(self, d: Dialog):
+        self.focus = d
+        self.event_loop(True)
 
     def message_box(self, text):
         self.focus = PromptDialog('Message', text, ['Ok'])
@@ -59,6 +67,11 @@ class Application(Screen):
                 else:
                     return False
         return True
+
+    #    def action_plugin_test(self):
+    #        pl = WindowPlugin()
+    #        self.active_plugins.append(pl)
+    #        self.window_manager.add_window(pl.get_window())
 
     def action_file_exit(self):
         if isinstance(self.focus, View):
@@ -128,14 +141,33 @@ class Application(Screen):
                     self.focus = PromptDialog('Error', 'Failed to clone plugins', ['Ok'])
                     self.event_loop(True)
                     return
+            else:
+                return
         d = PluginsDialog()
         self.focus = d
         self.event_loop(True)
         if d.get_result() == 'Ok':
-            self.rescan_plugins()
+            config.set_value('active_plugins', '\n'.join(d.get_active_plugins()))
+            self.activate_plugins()
 
-    def rescan_plugins(self):
-        pass
+    def activate_plugins(self):
+        cfg_plugins = set(config.get_value('active_plugins').split('\n'))
+        current = self.active_plugins.keys()
+        new_active = {}
+        for name in current:
+            p = self.active_plugins.get(name)
+            if name not in cfg_plugins:
+                p.deactivate()
+            else:
+                new_active[name] = p
+        for name in cfg_plugins:
+            if name not in new_active:
+                p = config.create_plugin(name)
+                new_active[name] = p
+                p.activate()
+                if isinstance(p, WindowPlugin):
+                    self.window_manager.add_window(p.get_window())
+        self.active_plugins = new_active
 
     def set_menu(self, bar):
         self.menu_bar = bar
@@ -153,6 +185,10 @@ class Application(Screen):
         for view in self.views:
             if view is not self.focus:
                 view.render()
+        for plugin_name in self.active_plugins:
+            plugin = self.active_plugins.get(plugin_name)
+            if plugin is not self.focus:
+                plugin.render()
         if self.focus is not None:
             self.focus.render()
 

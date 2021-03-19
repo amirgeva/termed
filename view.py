@@ -30,6 +30,9 @@ class View(FocusTarget):
         self._insert = True
         self._tabs = []
 
+    def get_window(self):
+        return self._window
+
     def open_tab(self, doc: Document):
         self._tabs.append(self._current_doc_settings())
         self._doc = doc

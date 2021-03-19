@@ -8,7 +8,9 @@ class Window:
         if len(args) == 1:
             if isinstance(args[0], Point):
                 self.size_preference = Point(args[0])
-                self.rect = Rect(0, 0, args[0].x, args[0].y)
+                w = 10 if args[0].x == 0 else args[0].x
+                h = 5 if args[0].y == 0 else args[0].y
+                self.rect = Rect(0, 0, w, h)
             elif isinstance(args[0], Rect):
                 self.rect = args[0]
                 self.size_preference = Point(self.rect.size)

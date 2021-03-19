@@ -28,5 +28,11 @@ class WindowPlugin(Plugin):
     def get_window(self) -> Window:
         return self._window
 
+    def on_focus(self):
+        self._window.set_border_type(1)
+
+    def on_leave(self):
+        self._window.set_border_type(0)
+
     def render(self):
         self._window.render()

@@ -33,6 +33,13 @@ class View(FocusTarget):
     def get_window(self):
         return self._window
 
+    def on_focus(self):
+        config.get_app().cursor(True)
+        self._window.set_border_type(1)
+
+    def on_leave(self):
+        self._window.set_border_type(0)
+
     def open_tab(self, doc: Document):
         self._tabs.append(self._current_doc_settings())
         self._doc = doc

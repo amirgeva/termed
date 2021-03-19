@@ -38,7 +38,7 @@ class WindowManager:
             w = self.windows[i]
             req = w.requested_size()
             if req.x > 0:
-                rects.append(Rect(x, 0, req.x, r0.height()))
+                rects.append(Rect(x, 1, req.x, r0.height()))
                 x += req.x
             elif req.y > 0:
                 if bottom_index < 0:
@@ -53,7 +53,8 @@ class WindowManager:
             width = rects[-1].right()
         reduction = width - self.rect.width()
         rects[0].size.x -= reduction
-        for i in range(1, bottom_index):
+        right_max = bottom_index if bottom_index > 0 else len(rects)
+        for i in range(1, right_max):
             rects[i].move(Point(-reduction, 0))
         if bottom_index > 0:
             height = rects[-1].bottom()

@@ -33,8 +33,9 @@ class Screen:
                          config.get_int('bg6', curses.COLOR_BLUE))
         curses.init_pair(7, config.get_int('fg7', curses.COLOR_WHITE),
                          config.get_int('bg7', curses.COLOR_RED))
-        self.box = '\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b'
-        self.tees = '\u2533\u2523\u252b\u253b\u254b'
+        self.boxes = ['\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b',
+                      '\u2554\u2550\u2557\u2551 \u2551\u255a\u2550\u255d']
+        self.tees = ['\u2533\u2523\u252b\u253b\u254b', '\u2566\u2560\u2563\u2569\u256c']
         sys.stdout.write('\033]12;yellow\007')
         self.dbg = None  # open('screen.log', 'w')
 
@@ -90,28 +91,34 @@ class Screen:
             self.move((x0, y))
             self.write(c * w, clr)
 
-    def draw_frame(self, rect: Rect, color: int):
+    def draw_frame_box(self, rect: Rect, color: int, box):
         self.move(rect.pos)
-        self.write(self.box[0], color)
+        self.write(box[0], color)
         for i in range(rect.width() - 2):
-            self.write(self.box[1], color)
-        self.write(self.box[2], color)
+            self.write(box[1], color)
+        self.write(box[2], color)
         for y in range(rect.pos.y + 1, rect.bottom() - 1):
             self.move(Point(rect.pos.x, y))
-            self.write(self.box[3], color)
+            self.write(box[3], color)
             self.move(Point(rect.right() - 1, y))
-            self.write(self.box[5], color)
+            self.write(box[5], color)
         self.move(Point(rect.pos.x, rect.bottom() - 1))
-        self.write(self.box[6], color)
+        self.write(box[6], color)
         for i in range(rect.width() - 2):
-            self.write(self.box[7], color)
-        self.write(self.box[8], color)
+            self.write(box[7], color)
+        self.write(box[8], color)
 
-    def draw_frame_text(self, pos: Point, text: str, color: int):
+    def draw_frame_text_tees(self, pos: Point, text: str, color: int, tees):
         self.move(pos)
-        self.write(self.tees[2], color)
+        self.write(tees[2], color)
         self.write(text, color)
-        self.write(self.tees[1], color)
+        self.write(tees[1], color)
+
+    def draw_frame(self, rect: Rect, color: int, btype: int):
+        self.draw_frame_box(rect,color,self.boxes[btype])
+
+    def draw_frame_text(self, pos: Point, text: str, color: int, btype: int):
+        self.draw_frame_text_tees(pos,text,color,self.tees[btype])
 
     def refresh(self):
         self.scr.refresh()

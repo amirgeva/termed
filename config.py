@@ -63,7 +63,9 @@ def generate_default_keymap(path: str):
 
 
 def get_section(name: str):
-    return cfg[name]
+    if name in cfg:
+        return cfg[name]
+    return {}
 
 
 def get_value(name, default=''):

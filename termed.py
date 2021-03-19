@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import sys
 from typing import List, Dict
-from geom import Point, Rect
+from geom import Rect
 from menus import Menu, create_menu
 from doc import Document
 from view import View
 from screen import Screen
-from window import Window
 from wm import WindowManager
 from utils import call_by_name
 from plugin import *
@@ -27,6 +26,7 @@ class Application(Screen):
         super().__init__()
         self.menu_bar = Menu('')
         self.shortcuts = {}
+        self.main_view=None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
@@ -35,6 +35,10 @@ class Application(Screen):
         self.active_plugins: Dict[str, Plugin] = {}
         FocusTarget.add(self)
         # self.activate_plugins()
+
+    def set_main_view(self, view):
+        self.main_view=view
+        self.add_view(view)
 
     def event_loop(self, modal):
         self._modal = modal
@@ -81,8 +85,8 @@ class Application(Screen):
         return True
 
     def action_file_save(self):
-        if isinstance(self.focus, View):
-            doc = self.focus.get_doc()
+        if isinstance(self.main_view, View):
+            doc = self.main_view.get_doc()
             filename = doc.get_filename()
             if not filename:
                 return self.action_file_save_as()
@@ -92,32 +96,34 @@ class Application(Screen):
             return True
 
     def action_file_save_as(self):
-        if isinstance(self.focus, View):
-            focus: View = self.focus
+        if isinstance(self.main_view, View):
             d = FileDialog(False)
             self.focus = d
             self.event_loop(True)
             r = d.get_result()
             if r == 'Save':
-                focus.get_doc().save(d.get_path())
+                self.main_view.get_doc().save(d.get_path())
                 self.render()
                 return True
         return False
 
     def action_file_new(self):
-        if isinstance(self.focus, View):
-            self.focus.open_tab(Document(''))
+        if isinstance(self.main_view, View):
+            self.main_view.open_tab(Document(''))
             self.render()
+
+    def open_file(self, path):
+        self.main_view.open_tab(Document(path))
+        self.render()
 
     def action_file_open(self):
         if isinstance(self.focus, View):
-            focus: View = self.focus
             d = FileDialog(True)
             self.focus = d
             self.event_loop(True)
             r = d.get_result()
             if r == 'Load':
-                focus.open_tab(Document(d.get_path()))
+                self.main_view.open_tab(Document(d.get_path()))
                 self.render()
                 return True
         return False
@@ -167,6 +173,7 @@ class Application(Screen):
                 p.activate()
                 if isinstance(p, WindowPlugin):
                     self.window_manager.add_window(p.get_window())
+                    self.add_view(p)
         self.active_plugins = new_active
 
     def set_menu(self, bar):
@@ -185,10 +192,10 @@ class Application(Screen):
         for view in self.views:
             if view is not self.focus:
                 view.render()
-        for plugin_name in self.active_plugins:
-            plugin = self.active_plugins.get(plugin_name)
-            if plugin is not self.focus:
-                plugin.render()
+        # for plugin_name in self.active_plugins:
+        #    plugin = self.active_plugins.get(plugin_name)
+        #    if plugin is not self.focus:
+        #        plugin.render()
         if self.focus is not None:
             self.focus.render()
 
@@ -199,9 +206,12 @@ class Application(Screen):
         return False
 
     def set_focus(self, target):
-        self.focus = target
-        if hasattr(target, 'on_focus'):
-            target.on_focus()
+        if self.focus != target:
+            if self.focus is not None and hasattr(self.focus, 'on_leave'):
+                self.focus.on_leave()
+            self.focus = target
+            if hasattr(target, 'on_focus'):
+                target.on_focus()
 
     def close_modal(self):
         self.set_focus(self.views[0])
@@ -277,6 +287,15 @@ class Application(Screen):
     def action_colors(self):
         self.set_focus(ColorDialog())
 
+    def action_next_view(self):
+        n = len(self.views)
+        if n <= 1:
+            return
+        for view, i in zip(self.views, range(n)):
+            if view == self.focus:
+                self.set_focus(self.views[(i + 1) % n])
+                return
+
 
 def message_box(text):
     config.get_app().message_box(text)
@@ -294,7 +313,7 @@ def main():
     app.window_manager.add_window(w)
     view = View(w, doc)
     app.set_menu(create_menu())
-    app.add_view(view)
+    app.set_main_view(view)
     app.render()
     view.redraw_all()
     error_report = ''

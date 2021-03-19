@@ -113,7 +113,7 @@ class Menu(FocusTarget):
         screen.cursor(False)
         pos = self.pos + Point(1, 0)
         h = len(self.items) + 2
-        screen.draw_frame(Rect(self.pos.x, self.pos.y, self.width, h), 4)
+        screen.draw_frame(Rect(self.pos.x, self.pos.y, self.width, h), 4, 0)
         index = 0
         for item in self.items:
             color = 4

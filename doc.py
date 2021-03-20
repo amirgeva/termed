@@ -39,6 +39,8 @@ class Document:
             self._path = path
         except OSError:
             return False
+        except UnicodeDecodeError:
+            return False
         return True
 
     def save(self, path=''):

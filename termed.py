@@ -114,6 +114,7 @@ class Application(Screen):
 
     def open_file(self, path):
         self.main_view.open_tab(Document(path))
+        self.set_focus(self.main_view)
         self.render()
 
     def action_file_open(self):

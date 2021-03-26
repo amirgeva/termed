@@ -5,23 +5,32 @@ from dialogs.text_widget import TextWidget
 from dialogs.wlist import ListWidget
 from utils import center_rect
 
-load_buttons = ['Load', 'Cancel']
-save_buttons = ['Save', 'Cancel']
+buttons = {
+    'Load': ['Load', 'Cancel'],
+    'Save': ['Save', 'Cancel'],
+    'SelDir': ['Select', 'Cancel']
+}
 
 
 class FileDialog(FormDialog):
-    def __init__(self, load: bool):
-        super().__init__(Window(center_rect(60, 20)), load_buttons if load else save_buttons)
+    def __init__(self, dialog_type: str):
+        if not dialog_type in buttons:
+            raise RuntimeError('Invalid dialog type')
+        labels = buttons.get(dialog_type)
+        super().__init__(Window(center_rect(60, 20)), labels)
         self._path = ''
-        self._window.set_title('Load' if load else 'Save')
+        self._window.set_title(labels[0])
         self._current_directory = os.getcwd()
-        self.add_widget(TextWidget(self.subwin(3, 2, 12, 3)).disable_border().set_text('Filename:'))
+
         self.filename = TextWidget(self.subwin(15, 1, 40, 3))
         self.filename.set_editable(True)
         self.filename.listen('modified', self.filename_modified)
         self.filename.listen('enter', self.filename_enter)
-        self.add_widget(self.filename)
-        self.set_focus(self.filename)
+
+        if dialog_type != 'SelDir':
+            self.add_widget(TextWidget(self.subwin(3, 2, 12, 3)).disable_border().set_text('Filename:'))
+            self.add_widget(self.filename)
+            self.set_focus(self.filename)
 
         self.add_widget(TextWidget(self.subwin(3, 4, 12, 3)).disable_border().set_text('Directory:'))
         self.directory = TextWidget(self.subwin(15, 4, 40, 3))
@@ -32,15 +41,20 @@ class FileDialog(FormDialog):
         self.dir_list.set_title('Directories')
         self.dir_list.listen('enter', self.selected_directory)
         self.add_widget(self.dir_list)
+
         self.file_list = ListWidget(self.subwin(27, 5, 30, 11))
         self.file_list.set_title('Files')
         self.file_list.listen('enter', self.selected_file)
-        self.add_widget(self.file_list)
+        if dialog_type != 'SelDir':
+            self.add_widget(self.file_list)
+        else:
+            self.set_focus(self.dir_list)
         self.set_directory(os.getcwd())
 
     def selected_directory(self):
         sub_dir = self.dir_list.get_selection()[0]
-        self.set_directory(os.path.join(self._current_directory, sub_dir))
+        path = os.path.abspath(os.path.join(self._current_directory, sub_dir))
+        self.set_directory(path)
 
     def selected_file(self):
         filename = self.file_list.get_selection()[0]

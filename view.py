@@ -10,6 +10,7 @@ from focus import FocusTarget
 from window import Window
 from doc import Document
 from color import Color
+from menus import Menu, fill_menu
 import pyperclip
 
 
@@ -29,9 +30,17 @@ class View(FocusTarget):
         self._redraw = True
         self._insert = True
         self._tabs = []
+        self._menu = Menu('')
+        self.create_menu()
 
     def get_window(self):
         return self._window
+
+    def set_menu(self, menu):
+        self._menu = menu
+
+    def get_menu(self):
+        return self._menu
 
     def on_focus(self):
         config.get_app().cursor(True)
@@ -498,3 +507,31 @@ class View(FocusTarget):
 
     def action_prev_tab(self):
         self.switch_tab(False)
+
+    def create_menu(self):
+        app = config.get_app()
+        desc = [('&File', [('&New     Ctrl+N', app, 'file_new'),
+                           ('&Open    Ctrl+O', app, 'file_open'),
+                           ('&Save    Ctrl+S', app, 'file_save'),
+                           ('Save &As       ', app, 'file_save_as'),
+                           ('&Exit    Ctrl+Q', app, 'file_exit')
+                           ]),
+                ('&Edit', [('&Copy          Ctrl+C', app, 'copy'),
+                           ('C&ut           Ctrl+X', app, 'cut'),
+                           ('&Paste         Ctrl+V', app, 'paste'),
+                           ('&Find          Ctrl+F', app, 'find_replace'),
+                           ('Find &Again        F3', app, 'find_again'),
+                           ('&Record Macro  Ctrl+R', app, 'toggle_macro_record'),
+                           ('P&lay Macro    Ctrl+P', app, 'play_macro'),
+                           ]),
+                ('&Options', [('&Colors', app, 'colors'),
+                              ('&Editor', app, 'cfg_editor'),
+                              ('&Key Mapping', app, 'keymap_dialog'),
+                              ('&Plugins', app, 'plugins')
+                              ]),
+                ('&Help', [('&About', app, 'about'),
+                           ]),
+                ]
+        bar = Menu('')
+        fill_menu(bar, desc)
+        self.set_menu(bar)

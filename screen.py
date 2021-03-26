@@ -1,10 +1,11 @@
 import sys
 import curses
 import config
+from base import Base
 from geom import Rect, Point
 
 
-class Screen:
+class Screen(Base):
     def __init__(self):
         # if 'TERM' not in os.environ:
         #     os.environ['TERM']='xterm-256color'

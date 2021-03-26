@@ -2,7 +2,6 @@
 import sys
 from typing import List, Dict
 from geom import Rect
-from menus import Menu, create_menu
 from doc import Document
 from view import View
 from screen import Screen
@@ -39,6 +38,7 @@ class Application(Screen):
     def set_main_view(self, view):
         self.main_view=view
         self.add_view(view)
+        self.set_menu(view.get_menu())
 
     def event_loop(self, modal):
         self._modal = modal
@@ -97,7 +97,7 @@ class Application(Screen):
 
     def action_file_save_as(self):
         if isinstance(self.main_view, View):
-            d = FileDialog(False)
+            d = FileDialog('Save')
             self.focus = d
             self.event_loop(True)
             r = d.get_result()
@@ -119,7 +119,7 @@ class Application(Screen):
 
     def action_file_open(self):
         if isinstance(self.focus, View):
-            d = FileDialog(True)
+            d = FileDialog('Load')
             self.focus = d
             self.event_loop(True)
             r = d.get_result()
@@ -213,6 +213,8 @@ class Application(Screen):
             self.focus = target
             if hasattr(target, 'on_focus'):
                 target.on_focus()
+            if hasattr(target, 'get_menu'):
+                self.set_menu(target.get_menu())
 
     def close_modal(self):
         self.set_focus(self.views[0])
@@ -242,8 +244,8 @@ class Application(Screen):
         return True
 
     def on_action(self, action):
-        func_name = f'action_{action}'
-        if not call_by_name(self, func_name):
+        if not super().on_action(action):
+            func_name = f'action_{action}'
             if not call_by_name(self.focus, func_name):
                 if hasattr(self.focus, 'on_action'):
                     self.focus.on_action(action)
@@ -313,7 +315,6 @@ def main():
     w = Window(Point(app.width(), app.height()))
     app.window_manager.add_window(w)
     view = View(w, doc)
-    app.set_menu(create_menu())
     app.set_main_view(view)
     app.render()
     view.redraw_all()

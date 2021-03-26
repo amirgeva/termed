@@ -1,6 +1,7 @@
 from geom import Point
 from window import Window
 from focus import FocusTarget
+from menus import Menu
 
 
 class Plugin(FocusTarget):
@@ -21,6 +22,13 @@ class WindowPlugin(Plugin):
     def __init__(self, size: Point = Point(0, 5)):
         super().__init__()
         self._window = Window(size)
+        self._menu = Menu('')
+
+    def set_menu(self, menu):
+        self._menu = menu
+
+    def get_menu(self):
+        return self._menu
 
     def set_title(self, title: str):
         self._window.set_title(title)

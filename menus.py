@@ -21,7 +21,7 @@ class MenuItem(object):
 
     def activate(self):
         if self.app is not None and self.action is not None:
-            self.app.close_modal()
+            get_app().close_modal()
             self.app.on_action(self.action)
 
 
@@ -148,30 +148,30 @@ def fill_menu(menu, desc):
             raise RuntimeError(f'Invalid menu item: {item}')
 
 
-def create_menu():
-    app = get_app()
-    desc = [('&File', [('&New     Ctrl+N', app, 'file_new'),
-                       ('&Open    Ctrl+O', app, 'file_open'),
-                       ('&Save    Ctrl+S', app, 'file_save'),
-                       ('Save &As       ', app, 'file_save_as'),
-                       ('&Exit    Ctrl+Q', app, 'file_exit')
-                       ]),
-            ('&Edit', [('&Copy          Ctrl+C', app, 'copy'),
-                       ('C&ut           Ctrl+X', app, 'cut'),
-                       ('&Paste         Ctrl+V', app, 'paste'),
-                       ('&Find          Ctrl+F', app, 'find_replace'),
-                       ('Find &Again        F3', app, 'find_again'),
-                       ('&Record Macro  Ctrl+R', app, 'toggle_macro_record'),
-                       ('P&lay Macro    Ctrl+P', app, 'play_macro'),
-                       ]),
-            ('&Options', [('&Colors', app, 'colors'),
-                          ('&Editor', app, 'cfg_editor'),
-                          ('&Key Mapping', app, 'keymap_dialog'),
-                          ('&Plugins', app, 'plugins')
-                          ]),
-            ('&Help', [('&About', app, 'about'),
-                       ]),
-            ]
-    bar = Menu('')
-    fill_menu(bar, desc)
-    return bar
+# def create_menu():
+#     app = get_app()
+#     desc = [('&File', [('&New     Ctrl+N', app, 'file_new'),
+#                        ('&Open    Ctrl+O', app, 'file_open'),
+#                        ('&Save    Ctrl+S', app, 'file_save'),
+#                        ('Save &As       ', app, 'file_save_as'),
+#                        ('&Exit    Ctrl+Q', app, 'file_exit')
+#                        ]),
+#             ('&Edit', [('&Copy          Ctrl+C', app, 'copy'),
+#                        ('C&ut           Ctrl+X', app, 'cut'),
+#                        ('&Paste         Ctrl+V', app, 'paste'),
+#                        ('&Find          Ctrl+F', app, 'find_replace'),
+#                        ('Find &Again        F3', app, 'find_again'),
+#                        ('&Record Macro  Ctrl+R', app, 'toggle_macro_record'),
+#                        ('P&lay Macro    Ctrl+P', app, 'play_macro'),
+#                        ]),
+#             ('&Options', [('&Colors', app, 'colors'),
+#                           ('&Editor', app, 'cfg_editor'),
+#                           ('&Key Mapping', app, 'keymap_dialog'),
+#                           ('&Plugins', app, 'plugins')
+#                           ]),
+#             ('&Help', [('&About', app, 'about'),
+#                        ]),
+#             ]
+#     bar = Menu('')
+#     fill_menu(bar, desc)
+#     return bar

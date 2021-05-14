@@ -1,0 +1,6 @@
+[submodule "lspclient"]
+	path = lspclient
+	url = git@github.com:amirgeva/lspclient.git
+[submodule "termed_plugins"]
+	path = plugins
+	url = git@github.com:amirgeva/termed_plugins.git

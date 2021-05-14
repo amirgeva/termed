@@ -139,17 +139,6 @@ class Application(Screen):
                 self.focus.find_replace(d.options)
 
     def action_plugins(self):
-        if not config.plugins_exist():
-            d = PromptDialog('Plugins', 'Clone Plugins?', ['Yes', 'No'])
-            self.focus = d
-            self.event_loop(True)
-            if d.get_result() == 'Yes':
-                if not config.clone_plugins():
-                    self.focus = PromptDialog('Error', 'Failed to clone plugins', ['Ok'])
-                    self.event_loop(True)
-                    return
-            else:
-                return
         d = PluginsDialog()
         self.focus = d
         self.event_loop(True)

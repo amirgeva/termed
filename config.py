@@ -1,9 +1,7 @@
 import os
-import sys
 import atexit
 import json
 from typing import List
-import subprocess
 from utils import ctrl
 from configparser import ConfigParser
 
@@ -106,7 +104,6 @@ home = os.environ['HOME']
 cfg_dir = os.path.join(home, '.termed')
 os.makedirs(cfg_dir, 0o755, True)
 cfg_path = os.path.join(cfg_dir, 'termed.ini')
-plugins_dir = os.path.join(cfg_dir, 'plugins')
 keymap_path = os.path.join(cfg_dir, 'keymap.json')
 cfg = ConfigParser()
 cfg.read(cfg_path)
@@ -141,19 +138,7 @@ def get_assigned_key(action) -> str:
     return ''
 
 
-def plugins_exist() -> bool:
-    return os.path.exists(plugins_dir)
-
-
-def verify_plugins_path():
-    if cfg_dir not in sys.path:
-        sys.path.append(cfg_dir)
-
-
 def create_plugin(name: str):
-    if not plugins_exist():
-        return None
-    verify_plugins_path()
     import importlib
     m = importlib.__import__(f'plugins.{name}')
     m = getattr(m, name)
@@ -161,17 +146,9 @@ def create_plugin(name: str):
     return f()
 
 
-def clone_plugins() -> bool:
-    try:
-        cmd = ['git', 'clone', 'https://github.com/amirgeva/termed_plugins', plugins_dir]
-        subprocess.run(args=cmd, capture_output=True, check=True)
-    except subprocess.CalledProcessError:
-        return False
-    return True
-
-
 def get_installed_plugins() -> List[str]:
     try:
+        plugins_dir = os.path.join(os.path.dirname(__file__), 'plugins')
         files = os.listdir(plugins_dir)
         files = [f for f in files if os.path.isdir(os.path.join(plugins_dir, f))]
         files = [f for f in files if os.path.exists(os.path.join(plugins_dir, f, '__init__.py'))]

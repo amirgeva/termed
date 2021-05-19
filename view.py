@@ -1,5 +1,5 @@
-import re
-from typing import List
+import typing
+from collections import OrderedDict
 from cursor import Cursor
 from visual_token import VisualToken
 from visual_line import VisualLine
@@ -29,7 +29,8 @@ class View(FocusTarget):
         self._last_x = 0
         self._redraw = True
         self._insert = True
-        self._tabs = []
+        self._current_tab = ''
+        self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('')))])
         self._menu = Menu('')
         self.create_menu()
 
@@ -50,48 +51,56 @@ class View(FocusTarget):
         self._window.set_border_type(0)
 
     def open_tab(self, doc: Document):
-        self._tabs.append(self._current_doc_settings())
-        self._doc = doc
-        doc.set_view(self)
-        self._visual_offset = Point(0, 0)
-        self._selection = None
-        self._cursor = Cursor()
-
-    def switch_tab(self, first: bool = True):
-        if len(self._tabs) == 0:
-            return
-        index = 0 if first else -1
-        tab = self._tabs[index]
-        del self._tabs[index]
-        if first:
-            self._tabs.append(self._current_doc_settings(tab))
-        else:
-            self._tabs.insert(0, self._current_doc_settings(tab))
+        path = doc.get_path()
+        if path not in self._tabs:
+            self._tabs[path] = self._generate_tab(doc)
+        self.switch_tab(path)
 
     def action_close_tab(self):
         if len(self._tabs) > 0:
             if not config.get_app().save_before_close([self._doc]):
                 return
-            tab = self._tabs[0]
-            del self._tabs[0]
-            self._current_doc_settings(tab)
+            path = self._doc.get_path()
+            keys = list(self._tabs.keys())
+            i = keys.index(path)
+            next_key = keys[0] if i >= len(keys) else keys[i + 1]
+            self.switch_tab(next_key)
+            del self._tabs[path]
         else:
             config.get_app().action_file_exit()
 
     def get_all_docs(self):
         res = [self._doc]
-        for tab in self._tabs:
-            res.append(tab.get('_doc'))
+        for path in self._tabs:
+            res.append(self._tabs.get(path).get('_doc'))
         return res
 
-    def _current_doc_settings(self, tab: dict = None):
+    @staticmethod
+    def _generate_tab(doc: Document):
+        return {'_doc': doc, '_visual_offset': Point(0, 0), '_selection': None, '_cursor': Cursor()}
+
+    def next_tab(self, delta: int):
+        old_path = self._doc.get_path()
+        paths = list(self._tabs.keys())
+        i = paths.index(old_path)
+        n = len(paths)
+        i = (i + delta) % n
+        new_path = paths[i]
+        if old_path != new_path:
+            self.switch_tab(new_path)
+
+    def switch_tab(self, new_path):
+        old_path = self._doc.get_path()
+        if len(self._tabs) == 0 or old_path == new_path:
+            return
         tab_fields = ['_doc', '_visual_offset', '_selection', '_cursor']
-        res = {}
+        new_settings = self._tabs.get(new_path)
+        old_settings = {}
         for field in tab_fields:
-            res[field] = getattr(self, field)
-            if tab is not None:
-                setattr(self, field, tab.get(field))
-        return res
+            old_settings[field] = getattr(self, field)
+            setattr(self, field, new_settings.get(field))
+        self._tabs[old_path] = old_settings
+        self._current_tab = new_path
 
     def get_doc(self) -> Document:
         return self._doc
@@ -182,7 +191,7 @@ class View(FocusTarget):
         if not self.delete_selection():
             self.set_cursor(self._doc.backspace(self._cursor))
 
-    def add_highlights(self, y: int, line: VisualLine) -> List[VisualToken]:
+    def add_highlights(self, y: int, line: VisualLine) -> typing.List[VisualToken]:
         text = line.get_visual_text()
         res = []
         if self._selection:
@@ -246,11 +255,13 @@ class View(FocusTarget):
         title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
         # self._window.set_title(title)
         if self._window.is_border():
-            titles = [(title, Color.BORDER_HIGHLIGHT)]
-            for tab in self._tabs:
+            titles = []
+            for path in self._tabs:
+                tab = self._tabs.get(path)
                 tab_doc = tab.get('_doc')
                 tab_title = tab_doc.get_filename() + (' *' if tab_doc.is_modified() else '')
-                titles.append((tab_title, Color.BORDER))
+                color = Color.BORDER_HIGHLIGHT if path == self._current_tab else Color.BORDER
+                titles.append((tab_title, color))
             x = 2
             i = 0
             while i < len(titles):
@@ -503,10 +514,10 @@ class View(FocusTarget):
         self._doc.undo()
 
     def action_next_tab(self):
-        self.switch_tab(True)
+        self.next_tab(1)
 
     def action_prev_tab(self):
-        self.switch_tab(False)
+        self.next_tab(-1)
 
     def create_menu(self):
         app = config.get_app()

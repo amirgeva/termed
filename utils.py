@@ -60,3 +60,5 @@ def call_by_name(obj, func_name, *args):
         f(*args)
         return True
     return False
+
+

@@ -140,10 +140,13 @@ def get_assigned_key(action) -> str:
 
 def create_plugin(name: str):
     import importlib
-    m = importlib.__import__(f'plugins.{name}')
-    m = getattr(m, name)
-    f = getattr(m, 'create')
-    return f()
+    try:
+        m = importlib.__import__(f'plugins.{name}')
+        m = getattr(m, name)
+        f = getattr(m, 'create')
+        return f()
+    except ModuleNotFoundError:
+        return None
 
 
 def get_installed_plugins() -> List[str]:

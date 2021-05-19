@@ -25,7 +25,7 @@ class Application(Screen):
         super().__init__()
         self.menu_bar = Menu('')
         self.shortcuts = {}
-        self.main_view=None
+        self.main_view = None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
@@ -36,7 +36,7 @@ class Application(Screen):
         # self.activate_plugins()
 
     def set_main_view(self, view):
-        self.main_view=view
+        self.main_view = view
         self.add_view(view)
         self.set_menu(view.get_menu())
 
@@ -112,9 +112,11 @@ class Application(Screen):
             self.main_view.open_tab(Document(''))
             self.render()
 
-    def open_file(self, path):
+    def open_file(self, path, row=-1, col=-1):
         self.main_view.open_tab(Document(path))
         self.set_focus(self.main_view)
+        if row >= 0 and col >= 0:
+            self.main_view.set_cursor(Point(col, row))
         self.render()
 
     def action_file_open(self):
@@ -159,11 +161,12 @@ class Application(Screen):
         for name in cfg_plugins:
             if name not in new_active:
                 p = config.create_plugin(name)
-                new_active[name] = p
-                p.activate()
-                if isinstance(p, WindowPlugin):
-                    self.window_manager.add_window(p.get_window())
-                    self.add_view(p)
+                if p:
+                    new_active[name] = p
+                    p.activate()
+                    if isinstance(p, WindowPlugin):
+                        self.window_manager.add_window(p.get_window())
+                        self.add_view(p)
         self.active_plugins = new_active
 
     def set_menu(self, bar):
@@ -236,8 +239,13 @@ class Application(Screen):
         if not super().on_action(action):
             func_name = f'action_{action}'
             if not call_by_name(self.focus, func_name):
+                for plugin_name in self.active_plugins.keys():
+                    plugin = self.active_plugins.get(plugin_name)
+                    if call_by_name(plugin, 'global_'+func_name):
+                        return True
                 if hasattr(self.focus, 'on_action'):
                     self.focus.on_action(action)
+        return False
 
     def place_cursor(self):
         if self.focus is not None and hasattr(self.focus, 'place_cursor'):

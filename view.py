@@ -63,7 +63,7 @@ class View(FocusTarget):
             path = self._doc.get_path()
             keys = list(self._tabs.keys())
             i = keys.index(path)
-            next_key = keys[0] if i >= len(keys) else keys[i + 1]
+            next_key = keys[0] if (i + 1) >= len(keys) else keys[i + 1]
             self.switch_tab(next_key)
             del self._tabs[path]
         else:

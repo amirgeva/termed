@@ -12,15 +12,22 @@ class Compound:
 
 
 class Document:
-    def __init__(self, filename):
+    def __init__(self, filename: str, view):
         self._lines: List[VisualLine] = [VisualLine('')]
         self._modified = False
         self._undo_stack = []
         self._undoing = False
         self._path = ''
-        self._view = None
+        self._view = view
         if filename:
-            self.load(filename)
+            if not self.load(filename):
+                raise IOError()
+
+    def clear(self):
+        self._lines = [VisualLine('')]
+        self._undo_stack = []
+        self._undoing = False
+        self._modified = False
 
     def get_filename(self) -> str:
         return os.path.basename(self._path)

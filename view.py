@@ -30,7 +30,7 @@ class View(FocusTarget):
         self._redraw = True
         self._insert = True
         self._current_tab = ''
-        self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('')))])
+        self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('', self)))])
         self._menu = Menu('')
         self.create_menu()
 
@@ -229,8 +229,8 @@ class View(FocusTarget):
         x0 = self._visual_offset.x
         x1 = x0 + self._window.width()
         for token in tokens:
-            token.move(-x0)
             token.clip(x0, x1)
+            token.move(-x0)
         cx = 0
         for token in tokens:
             text = token.get_text()
@@ -252,8 +252,6 @@ class View(FocusTarget):
         self._window.set_cursor(self.doc2win(self._cursor))
 
     def _render_tabs(self):
-        title = self._doc.get_filename() + (' *' if self._doc.is_modified() else '')
-        # self._window.set_title(title)
         if self._window.is_border():
             titles = []
             for path in self._tabs:
@@ -281,6 +279,8 @@ class View(FocusTarget):
         cx, cy = self._window.contains((x, y))
         if not cy:
             self._visual_offset.y = max(0, self._cursor.y - self._window.height() // 2)
+        if not cx:
+            self._visual_offset.x = max(0, self._cursor.x - self._window.width() // 2)
 
     def get_selection_text(self):
         if self._selection is None:

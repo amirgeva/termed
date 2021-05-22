@@ -1,5 +1,7 @@
 import sys
 import curses
+from builtins import staticmethod
+
 import config
 from base import Base
 from geom import Rect, Point
@@ -7,6 +9,7 @@ from geom import Rect, Point
 
 class Screen(Base):
     def __init__(self):
+        super().__init__()
         # if 'TERM' not in os.environ:
         #     os.environ['TERM']='xterm-256color'
         self.scr = curses.initscr()
@@ -40,14 +43,16 @@ class Screen(Base):
         sys.stdout.write('\033]12;yellow\007')
         self.dbg = None  # open('screen.log', 'w')
 
-    def update_color(self, color):
+    @staticmethod
+    def update_color(color):
         curses.init_pair(color, config.get_int(f'fg{color}', curses.COLOR_YELLOW),
                          config.get_int(f'bg{color}', curses.COLOR_BLUE))
 
     def get_color_names(self):
         return self._color_names
 
-    def query_colors(self, pair):
+    @staticmethod
+    def query_colors(pair):
         return curses.pair_content(pair)
 
     def width(self):
@@ -116,13 +121,20 @@ class Screen(Base):
         self.write(tees[1], color)
 
     def draw_frame(self, rect: Rect, color: int, btype: int):
-        self.draw_frame_box(rect,color,self.boxes[btype])
+        self.draw_frame_box(rect, color, self.boxes[btype])
 
     def draw_frame_text(self, pos: Point, text: str, color: int, btype: int):
-        self.draw_frame_text_tees(pos,text,color,self.tees[btype])
+        self.draw_frame_text_tees(pos, text, color, self.tees[btype])
 
     def refresh(self):
         self.scr.refresh()
+
+    def flush(self):
+        curses.halfdelay(1)
+        try:
+            return self.scr.getkey()
+        except curses.error:
+            return 0
 
     def getkey(self):
         try:

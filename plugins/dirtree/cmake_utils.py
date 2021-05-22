@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import subprocess as sp
 from typing import List
 import logger
@@ -43,7 +44,6 @@ def paths2tree(source_root: str, file_paths: List[str]):
 
 def scan_cmake(build_folder: str, path: str):
     source_root = ''
-    compile_commands = None
     for line in open(path).readlines():
         if line.startswith('CMAKE_SOURCE_DIR'):
             source_root = line.split()[-1]
@@ -54,6 +54,7 @@ def scan_cmake(build_folder: str, path: str):
     commands_path = os.path.join(build_folder, 'compile_commands.json')
     if not os.path.exists(commands_path):
         return False
+    shutil.copy(commands_path, source_root)
     compile_commands = json.load(open(commands_path))
     file_paths = set()
     for item in compile_commands:

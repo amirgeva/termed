@@ -21,7 +21,7 @@ class Window:
             self.rect = Rect(0, 0, 5, 5)
             self.size_preference = Point(5, 5)
         self._border = self.rect.height() > 2
-        self._border_type=0
+        self._border_type = 0
         self._title = ''
         self._footnotes = {}
 
@@ -71,8 +71,13 @@ class Window:
             p = p + Point(1, 1)
         get_app().move(self.rect.pos + p)
 
-    def text(self, s: str, color: int):
+    @staticmethod
+    def text(s: str, color: int):
         get_app().write(s, color)
+
+    @staticmethod
+    def flush():
+        get_app().flush()
 
     def render(self):
         if self._border:

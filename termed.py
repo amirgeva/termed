@@ -18,6 +18,7 @@ from dialogs.file_dialog import FileDialog
 from dialogs.color_dialog import ColorDialog
 from dialogs.find_dialog import FindDialog
 from dialogs.plugins_dialog import PluginsDialog
+from lspclient.client import LSPClient
 
 
 class Application(Screen):
@@ -32,8 +33,13 @@ class Application(Screen):
         self.focus = None
         self.terminating = False
         self.active_plugins: Dict[str, Plugin] = {}
+        self.lsp = LSPClient(config.get_value('source_root'))
         FocusTarget.add(self)
         # self.activate_plugins()
+
+    def close(self):
+        super().close()
+        self.lsp.shutdown()
 
     def set_main_view(self, view):
         self.main_view = view
@@ -57,6 +63,7 @@ class Application(Screen):
         self.event_loop(True)
 
     def save_before_close(self, docs: List[Document]):
+        paths = []
         for doc in docs:
             if doc.is_modified():
                 d = PromptDialog('Exit', 'Save file?', ['Yes', 'No', 'Cancel'])
@@ -64,12 +71,16 @@ class Application(Screen):
                 self.event_loop(True)
                 r = d.get_result()
                 if r == 'Yes':
+                    # TODO: Change to save current iter doc
                     if not self.action_file_save():
                         return False
                 elif r == 'No':
                     pass
                 else:
                     return False
+            paths.append(doc.get_path())
+        for path in paths:
+            self.lsp.close_source_file(path)
         return True
 
     #    def action_plugin_test(self):
@@ -109,15 +120,21 @@ class Application(Screen):
 
     def action_file_new(self):
         if isinstance(self.main_view, View):
-            self.main_view.open_tab(Document(''))
+            self.main_view.open_tab(Document('', self.main_view))
             self.render()
 
     def open_file(self, path, row=-1, col=-1):
-        self.main_view.open_tab(Document(path))
-        self.set_focus(self.main_view)
-        if row >= 0 and col >= 0:
-            self.main_view.set_cursor(Point(col, row))
-        self.render()
+        try:
+            self.main_view.open_tab(Document(path, self.main_view))
+            self.lsp.open_source_file(path)
+            self.set_focus(self.main_view)
+            if row >= 0 and col >= 0:
+                self.main_view.set_cursor(Point(col, row))
+            self.render()
+        except IOError:
+            d = PromptDialog('Error', f'File {path} not found', ['Ok'])
+            self.focus = d
+            self.event_loop(True)
 
     def action_file_open(self):
         if isinstance(self.focus, View):
@@ -126,8 +143,7 @@ class Application(Screen):
             self.event_loop(True)
             r = d.get_result()
             if r == 'Load':
-                self.main_view.open_tab(Document(d.get_path()))
-                self.render()
+                self.open_file(d.get_path())
                 return True
         return False
 
@@ -145,11 +161,11 @@ class Application(Screen):
         self.focus = d
         self.event_loop(True)
         if d.get_result() == 'Ok':
-            config.set_value('active_plugins', '\n'.join(d.get_active_plugins()))
+            config.set_value('active_plugins', ' '.join(d.get_active_plugins()))
             self.activate_plugins()
 
     def activate_plugins(self):
-        cfg_plugins = set(config.get_value('active_plugins').split('\n'))
+        cfg_plugins = set(config.get_value('active_plugins').split(' '))
         current = self.active_plugins.keys()
         new_active = {}
         for name in current:
@@ -241,7 +257,7 @@ class Application(Screen):
             if not call_by_name(self.focus, func_name):
                 for plugin_name in self.active_plugins.keys():
                     plugin = self.active_plugins.get(plugin_name)
-                    if call_by_name(plugin, 'global_'+func_name):
+                    if call_by_name(plugin, 'global_' + func_name):
                         return True
                 if hasattr(self.focus, 'on_action'):
                     self.focus.on_action(action)
@@ -307,7 +323,7 @@ def main():
     filename = ''
     if len(sys.argv) > 1:
         filename = sys.argv[1]
-    doc = Document(filename)
+    doc = Document(filename, None)
     doc.load(filename)
     w = Window(Point(app.width(), app.height()))
     app.window_manager.add_window(w)
@@ -316,6 +332,9 @@ def main():
     app.render()
     view.redraw_all()
     error_report = ''
+    app.activate_plugins()
+    app.render()
+    view.redraw_all()
     # noinspection PyBroadException
     try:
         app.event_loop(False)

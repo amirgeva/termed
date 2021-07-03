@@ -193,8 +193,18 @@ class View(FocusTarget):
             self.insert_text('\t')
 
     def action_enter(self):
+        line_text = self._doc.get_row(self._cursor.y).get_logical_text()
+        white_prefix = ''
+        for i in range(len(line_text)):
+            if line_text[i] != '\t' and line_text[i] != ' ':
+                white_prefix = line_text[0:i]
+                if line_text[i] == '{':
+                    white_prefix += "\t"
+                break
         self._doc.split_line(self._cursor)
         self.set_cursor(Cursor(0, self._cursor.y + 1))
+        self._doc.insert_text(self.get_cursor(), white_prefix)
+        self.set_cursor(Cursor(len(white_prefix), self._cursor.y))
         self.redraw_all()
 
     def action_delete(self):

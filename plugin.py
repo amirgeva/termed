@@ -8,6 +8,9 @@ class Plugin(FocusTarget):
     def __init__(self):
         super().__init__()
 
+    def shutdown(self):
+        pass
+
     def activate(self):
         pass
 

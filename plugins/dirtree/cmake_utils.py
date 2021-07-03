@@ -32,7 +32,7 @@ def paths2tree(source_root: str, file_paths: List[str]):
             parts.append(tail)
             rel = head
         parts = list(reversed(parts))
-        logger.logwrite(str(parts))
+        #logger.logwrite(str(parts))
         cur = root
         for part in parts[0:-1]:
             if part not in cur:
@@ -59,10 +59,10 @@ def scan_cmake(build_folder: str, path: str):
     file_paths = set()
     for item in compile_commands:
         filename = item.get('file')
-        logger.logwrite(f'Adding source: {filename}')
+        #logger.logwrite(f'Adding source: {filename}')
         file_paths.add(filename)
         headers = scan_headers(item)
-        logger.logwrite(f'Headers:\n{headers}\n------------------------')
+        #logger.logwrite(f'Headers:\n{headers}\n------------------------')
         for header in headers:
             file_paths.add(header)
     return source_root, paths2tree(source_root, list(file_paths))

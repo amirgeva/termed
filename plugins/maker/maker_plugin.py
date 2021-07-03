@@ -1,4 +1,5 @@
 import re
+import os
 import subprocess as sp
 import config
 from geom import Point
@@ -12,7 +13,7 @@ from cursor import Cursor
 class MakerPlugin(WindowPlugin):
     def __init__(self):
         super().__init__(Point(0, 10))
-        self._root = config.get_value('root')
+        self._root = os.path.join(config.work_dir, 'build')
         self._offset = 0
         self._error_index = 0
         self._doc = Document('', None)
@@ -38,7 +39,7 @@ class MakerPlugin(WindowPlugin):
         return self.action_next_error()
 
     def action_next_error(self):
-        source_root = config.get_value('source_root')
+        source_root = config.work_dir
         while self._error_index < self._doc.rows_count():
             line = self._doc.get_row(self._error_index).get_logical_text()
             self._error_index += 1

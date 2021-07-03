@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 import sys
 from typing import List, Dict
+import logger
+import json
 from geom import Rect
 from doc import Document
 from view import View
+from cursor import Cursor
 from screen import Screen
 from wm import WindowManager
 from utils import call_by_name
@@ -33,13 +36,37 @@ class Application(Screen):
         self.focus = None
         self.terminating = False
         self.active_plugins: Dict[str, Plugin] = {}
-        self.lsp = LSPClient(config.get_value('source_root'))
+        self._root = config.work_dir
+        self.lsp = LSPClient(self._root)
         FocusTarget.add(self)
         # self.activate_plugins()
 
     def close(self):
+        open_docs = self.main_view.get_all_open_tabs()
+        config.local_set_value('open_docs', open_docs)
         super().close()
         self.lsp.shutdown()
+        for plugin_name in self.active_plugins:
+            self.active_plugins[plugin_name].shutdown()
+
+    def reopen_session(self):
+        paths = [path for path in config.local_get_value('open_docs').split(',') if path]
+        logger.logwrite(paths)
+        open_count=0
+        for path in paths:
+            parts = path.split(':')
+            cur = parts[0]
+            row = 0
+            col = 0
+            if len(parts) > 2:
+                row = int(parts[1])
+                col = int(parts[2])
+            if cur:
+                logger.logwrite(f'Opening "{cur}" at row={row}, col={col}')
+                self.open_file(cur, row, col)
+                open_count+=1
+        if open_count>0:
+            self.main_view.close_empty_tab()
 
     def set_main_view(self, view):
         self.main_view = view
@@ -249,7 +276,22 @@ class Application(Screen):
             else:
                 if hasattr(self.focus, 'process_key'):
                     self.focus.process_key(key)
+                    if key == '.' and hasattr(self.focus, 'get_doc'):
+                        self.get_suggestions()
+                    # logger.logwrite(f'key: {key}')
         return True
+
+    def get_suggestions(self):
+        doc: Document = self.focus.get_doc()
+        path = doc.get_path()
+        if self.lsp.is_open_file(path):
+            self.lsp.modify_source_file(path, doc.get_text())
+            cursor = self.focus.get_cursor()
+            col, row = cursor.x, cursor.y
+            self.lsp.request_completion(path, row, col, self.handle_suggestions)
+
+    def handle_suggestions(self, msg):
+        logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
 
     def on_action(self, action):
         if not super().on_action(action):
@@ -329,6 +371,7 @@ def main():
     app.window_manager.add_window(w)
     view = View(w, doc)
     app.set_main_view(view)
+    app.reopen_session()
     app.render()
     view.redraw_all()
     error_report = ''

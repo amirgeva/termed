@@ -78,6 +78,10 @@ class Document:
     def get_row(self, y: int) -> VisualLine:
         return self._lines[y]
 
+    def get_text(self):
+        lines = [line.get_logical_text() for line in self._lines]
+        return '\n'.join(lines)
+
     def insert_text(self, cursor: Cursor, text: str):
         self.set_modified(True)
         line = self.get_row(cursor.y)

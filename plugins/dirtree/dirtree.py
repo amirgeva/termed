@@ -1,6 +1,7 @@
 import os
 import config
 import logger
+from configparser import ConfigParser
 from geom import Point
 from plugin import WindowPlugin
 from logger import logwrite
@@ -21,14 +22,29 @@ class DirTreePlugin(WindowPlugin):
         self._root = os.getcwd()
         self._tree = TreeNode('', True, None)
         self.scan(self._tree, self._root, 0)
-        self._root = config.get_value('root')
+        self._root = config.work_dir
+        logger.logwrite(f'DirTreePlugin root={self._root}')
+        self._cur_y = -1
         if self._root:
             self.select_root(self._root)
+            if self._tree.child_count() > 0:
+                self._cur_y = 0
+            self.local_config_path = os.path.join(self._root, '.termed.ini')
+            if os.path.exists(self.local_config_path):
+                self.load_local_config()
         self._total_rows = 0
-        self._cur_y = -1
-        if self._tree.child_count() > 0:
-            self._cur_y = 0
         self.create_menu()
+
+    def shutdown(self):
+        expanded = [c.get_path(self._root) for c in self._tree.get_all_expanded()]
+        config.local_set_value('dirtree_expanded', ','.join(expanded))
+        config.local_set_value('dirtree_cur_y', str(self._cur_y))
+
+    def load_local_config(self):
+        expanded_paths = config.local_get_value('dirtree_expanded', '')
+        expanded_paths = set([p.strip() for p in expanded_paths.split(',')])
+        self._tree.expand_set(expanded_paths, self._root)
+        self._cur_y = config.local_get_int('dirtree_cur_y', self._cur_y)
 
     def select_root(self, root):
         self._root = root
@@ -42,8 +58,6 @@ class DirTreePlugin(WindowPlugin):
 
     def select_makefile(self, build_folder: str, path: str):
         self._root, tree = scan_cmake(build_folder, path)
-        config.set_value('source_root', self._root)
-        logger.logwrite(f'Makefile Tree:\n{tree}\n------------------------------\n')
         self._tree = convert_tree(tree)
         return True
 

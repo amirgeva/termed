@@ -75,6 +75,20 @@ class View(FocusTarget):
             res.append(self._tabs.get(path).get('_doc'))
         return res
 
+    def get_all_open_tabs(self):
+        res = []
+        for path in self._tabs.keys():
+            tab = self._tabs.get(path)
+            c = tab.get('_cursor')
+            res.append(f'{path}:{c.y}:{c.x}')
+        c = self.get_cursor()
+        res.append(f'{self._current_tab}:{c.y}:{c.x}')
+        return ','.join(res)
+
+    def close_empty_tab(self):
+        if '' in self._tabs:
+            del self._tabs['']
+
     @staticmethod
     def _generate_tab(doc: Document):
         return {'_doc': doc, '_visual_offset': Point(0, 0), '_selection': None, '_cursor': Cursor()}

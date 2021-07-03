@@ -84,9 +84,29 @@ def set_value(name, value):
     section[name] = str(value)
 
 
+def local_get_value(name, default=''):
+    if name not in local_section:
+        local_section[name] = default
+    return local_section.get(name)
+
+
+def local_get_int(name, default=0):
+    return int(local_get_value(name, str(default)))
+
+
+def local_get_bool(name, default=False):
+    return local_get_value(name, str(default)) != 'False'
+
+
+def local_set_value(name, value):
+    local_section[name] = str(value)
+
+
 def save_cfg():
-    with open(cfg_path, 'w') as configfile:
-        cfg.write(configfile)
+    with open(local_cfg_path, 'w') as f:
+        local_cfg.write(f)
+    with open(cfg_path, 'w') as f:
+        cfg.write(f)
 
 
 class Constants:
@@ -115,6 +135,14 @@ if os.path.exists(keymap_path):
         keymap = json.load(fi)
 else:
     keymap = generate_default_keymap(keymap_path)
+work_dir = os.getcwd()
+local_cfg_path = os.path.join(work_dir, '.termed.ini')
+local_cfg = ConfigParser()
+if os.path.exists(local_cfg_path):
+    local_cfg.read(local_cfg_path)
+if 'config' not in local_cfg:
+    local_cfg['config'] = {}
+local_section = local_cfg['config']
 
 atexit.register(save_cfg)
 

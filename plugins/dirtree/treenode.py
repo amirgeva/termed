@@ -1,16 +1,17 @@
 import os
+from typing import List
 
 
 class TreeNode:
     def __init__(self, name: str, is_dir: bool, parent):
-        self._name = name
-        self._parent = parent
+        self._name: str = name
+        self._parent: TreeNode = parent
         if is_dir:
             self._name += "/"
-        self._expanded = False
-        self._is_dir = is_dir
-        self._children = []
-        self._current = 0
+        self._expanded: bool = False
+        self._is_dir: bool = is_dir
+        self._children: List[TreeNode] = []
+        self._current: int = 0
 
     def __iter__(self):
         self._current = 0
@@ -87,6 +88,20 @@ class TreeNode:
             cur_node = cur_node.get_parent()
         parts = list(reversed(parts))
         return os.path.join(root, *parts)
+
+    def get_all_expanded(self):
+        res = []
+        for c in self._children:
+            if c.is_expanded():
+                res.append(c)
+            res.extend(c.get_all_expanded())
+        return res
+
+    def expand_set(self, paths, root):
+        for c in self._children:
+            if c.get_path(root) in paths:
+                c.set_expanded(True)
+            c.expand_set(paths, root)
 
 
 def convert_node(node: TreeNode, subtree: dict):

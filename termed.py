@@ -52,7 +52,7 @@ class Application(Screen):
     def reopen_session(self):
         paths = [path for path in config.local_get_value('open_docs').split(',') if path]
         logger.logwrite(paths)
-        open_count=0
+        open_count = 0
         for path in paths:
             parts = path.split(':')
             cur = parts[0]
@@ -64,9 +64,39 @@ class Application(Screen):
             if cur:
                 logger.logwrite(f'Opening "{cur}" at row={row}, col={col}')
                 self.open_file(cur, row, col)
-                open_count+=1
-        if open_count>0:
+                open_count += 1
+        if open_count > 0:
             self.main_view.close_empty_tab()
+            doc: Document = self.main_view.get_doc()
+            n = doc.rows_count()
+            self.lsp.request_coloring(doc.get_path(), self.handle_coloring)
+
+    def handle_coloring(self, msg):
+        tokens, modifiers = self.lsp.get_coloring_legend()
+        if 'result' in msg and 'data' in msg.get('result'):
+            data = msg['result']['data']
+            logger.logwrite(str(data))
+            n = len(data)
+            i = 0
+            self.main_view.clear_semantic_highlight()
+            prev_row = 0
+            prev_col = 0
+            while i < n:
+                row = data[i] + prev_row
+                if row != prev_row:
+                    prev_col = 0
+                col = data[i + 1] + prev_col
+                prev_row = row
+                prev_col = col
+                length = data[i + 2]
+                type_index = data[i + 3]
+                mod_bits = data[i + 4]
+                i += 5
+                try:
+                    type_name = tokens[type_index]
+                except IndexError:
+                    type_name = "Unknown"
+                self.main_view.add_semantic_highlight(row, col, length, type_name)
 
     def set_main_view(self, view):
         self.main_view = view
@@ -360,6 +390,7 @@ def message_box(text):
 
 
 def main():
+    input()
     app = Application()
     config.app = app
     filename = ''

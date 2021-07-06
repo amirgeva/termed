@@ -11,10 +11,15 @@ class ColorDialog(FormDialog):
     def __init__(self):
         super().__init__(Window(center_rect(60, 20)), ['Close'])
         self._current_pair = 0
-        self._pair_list = ListWidget(self.subwin(2, 3, 18, 9))
+        self._pair_list = ListWidget(self.subwin(2, 2, 18, 14))
         self._pair_list.set_title('Palette')
         self.add_widget(self._pair_list)
-        for i in range(1, 8):
+        self.sample = TextWidget(self.subwin(22, 3, 10, 1))
+        self.sample.set_color(0)
+        self.sample.set_text('Sample')
+        self.sample.disable_border()
+        self.add_widget(self.sample)
+        for i in range(1, 16):
             name = f'Pair {i}'
             for field in dir(Color):
                 value = getattr(Color, field)
@@ -22,11 +27,7 @@ class ColorDialog(FormDialog):
                     name = field
                     break
             self._pair_list.add_item(name)
-            sample = TextWidget(self.subwin(22, 3 + i, 10, 1))
-            sample.set_color(i)
-            sample.set_text('Sample')
-            sample.disable_border()
-            self.add_widget(sample)
+            # sample = TextWidget(self.subwin(22, 3 + i, 10, 1))
         self._pair_list.listen('selection_changed', self._set_current_pair)
 
         from config import get_app
@@ -53,6 +54,7 @@ class ColorDialog(FormDialog):
         pair = self._query(self._current_pair)
         self._foreground_list.set_selection(pair[0])
         self._background_list.set_selection(pair[1])
+        self.sample.set_color(self._current_pair)
 
     def _change_fore(self):
         c = self._foreground_list.get_selection()[1]

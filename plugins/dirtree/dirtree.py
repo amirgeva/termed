@@ -69,11 +69,11 @@ class DirTreePlugin(WindowPlugin):
                 if entry.is_dir(follow_symlinks=False):
                     node = TreeNode(entry.name, True, tree)
                     tree.add_child(node)
-                    logwrite(f'{spaces}{entry.name}/')
+                    #logwrite(f'{spaces}{entry.name}/')
                     self.scan(node, os.path.join(path, entry.name), indent + 2)
                 if entry.is_file(follow_symlinks=False):
                     tree.add_child(TreeNode(entry.name, False, tree))
-                    logwrite(f'{spaces}{entry.name}')
+                    #logwrite(f'{spaces}{entry.name}')
 
     def _render_node(self, node: TreeNode, indent: int, y: int):
         spaces = ' ' * indent

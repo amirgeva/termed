@@ -1,3 +1,4 @@
+import random
 import sys
 import curses
 from builtins import staticmethod
@@ -5,6 +6,9 @@ from builtins import staticmethod
 import config
 from base import Base
 from geom import Rect, Point
+
+color_names = [
+]
 
 
 class Screen(Base):
@@ -20,23 +24,29 @@ class Screen(Base):
         self.size = mx[1], mx[0]
         self.rect = Rect(0, 0, self.size[0], self.size[1])
         curses.start_color()
-        curses.use_default_colors()
-        self._color_names = sorted(['BLACK', 'WHITE', 'RED', 'YELLOW', 'BLUE', 'CYAN', 'MAGENTA', 'GREEN'],
-                                   key=lambda c: getattr(curses, f'COLOR_{c}'))
-        curses.init_pair(1, config.get_int('fg1', curses.COLOR_YELLOW),
-                         config.get_int('bg1', curses.COLOR_BLUE))
-        curses.init_pair(2, config.get_int('fg2', curses.COLOR_WHITE),
-                         config.get_int('bg2', curses.COLOR_GREEN))
-        curses.init_pair(3, config.get_int('fg3', curses.COLOR_BLACK),
-                         config.get_int('bg3', curses.COLOR_WHITE))
-        curses.init_pair(4, config.get_int('fg4', curses.COLOR_BLACK),
-                         config.get_int('bg4', curses.COLOR_CYAN))
-        curses.init_pair(5, config.get_int('fg5', curses.COLOR_YELLOW),
-                         config.get_int('bg5', curses.COLOR_BLUE))
-        curses.init_pair(6, config.get_int('fg6', curses.COLOR_YELLOW),
-                         config.get_int('bg6', curses.COLOR_BLUE))
-        curses.init_pair(7, config.get_int('fg7', curses.COLOR_WHITE),
-                         config.get_int('bg7', curses.COLOR_RED))
+        # curses.use_default_colors()
+        self._color_names = [
+            'Black', 'Navy', 'Blue', 'Grass', 'Turquoise', 'Sky', 'Green', 'Spring', 'Cyan',
+            'Brown', 'Purple', 'Violet', 'Gold', 'Gray', 'Slate', 'Green2', 'Green3', 'Cyan2',
+            'Red', 'Magenta', 'Pink', 'Orange', 'Skin', 'Pink2', 'Yellow', 'Sun', 'White'
+        ]
+        i = 0
+        for r in range(0, 1001, 500):
+            for g in range(0, 1001, 500):
+                for b in range(0, 1001, 500):
+                    curses.init_color(i, r, g, b)
+                    i += 1
+        default_pairs = [
+            (26, 0), (24, 0), (21, 0), (16, 0), (8, 0), (23, 0), (13, 0)
+        ]
+        i = 1
+        for pair in default_pairs:
+            curses.init_pair(i, config.get_int(f'fg{i}', pair[0]), config.get_int(f'bg{i}', pair[1]))
+            i = i + 1
+        while i < 32:
+            curses.init_pair(i, config.get_int(f'fg{i}', random.randint(0, 31)),
+                             config.get_int(f'bg{i}', random.randint(0, 31)))
+            i += 1
         self.boxes = ['\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b',
                       '\u2554\u2550\u2557\u2551 \u2551\u255a\u2550\u255d']
         self.tees = ['\u2533\u2523\u252b\u253b\u254b', '\u2566\u2560\u2563\u2569\u256c']
@@ -79,6 +89,7 @@ class Screen(Base):
             self.dbg.flush()
         attr = 0
         color = curses.color_pair(color | (attr & 0x7FFF))
+        # color = 12
         try:
             if isinstance(text, str):
                 for i in range(0, len(text)):

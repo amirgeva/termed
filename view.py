@@ -1,5 +1,5 @@
 import typing
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from cursor import Cursor
 from visual_token import VisualToken
 from visual_line import VisualLine
@@ -11,6 +11,7 @@ from window import Window
 from doc import Document
 from color import Color
 from menus import Menu, fill_menu
+import logger
 import pyperclip
 
 
@@ -32,6 +33,7 @@ class View(FocusTarget):
         self._current_tab = ''
         self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('', self)))])
         self._menu = Menu('')
+        self._semantic_highlights = defaultdict(list)
         self.create_menu()
 
     def get_window(self):
@@ -215,6 +217,30 @@ class View(FocusTarget):
         if not self.delete_selection():
             self.set_cursor(self._doc.backspace(self._cursor))
 
+    def clear_semantic_highlight(self):
+        self._semantic_highlights = defaultdict(list)
+
+    def add_semantic_highlight(self, y: int, col: int, length: int, token_type: str):
+        logger.logwrite(f'Highlight: y={y} col={col} length={length} type={token_type}')
+        self._semantic_highlights[y].append((col, length, token_type))
+
+    def process_semantic_highlight(self, y: int, text: str, res: typing.List[VisualToken]):
+        if y in self._semantic_highlights:
+            line = self._doc.get_row(y)
+            x = 0
+            for col, length, token_type in self._semantic_highlights.get(y):
+                vcol = line.get_visual_index(col)
+                if vcol > x:
+                    res.append(VisualToken(x, text[x:vcol]))
+                    x = vcol
+                res.append(VisualToken(x, text[x:x + length]))
+                res[-1].set_color(6)
+                x += length
+            if x < len(text):
+                res.append(VisualToken(x, text[x:]))
+        else:
+            res.append(VisualToken(0, text))
+
     def add_highlights(self, y: int, line: VisualLine) -> typing.List[VisualToken]:
         text = line.get_visual_text()
         res = []
@@ -232,9 +258,9 @@ class View(FocusTarget):
                 if stop.y > y:
                     res[-1].set_color(sel_highlight)
             else:
-                res.append(VisualToken(0, text))
+                self.process_semantic_highlight(y, text, res)
         else:
-            res.append(VisualToken(0, text))
+            self.process_semantic_highlight(y, text, res)
         return res
 
     def draw_cursor_line(self):

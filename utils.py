@@ -1,4 +1,5 @@
 from geom import Point, Rect
+from io import StringIO
 
 
 class ExitException(Exception):
@@ -60,3 +61,22 @@ def call_by_name(obj, func_name, *args):
         f(*args)
         return True
     return False
+
+
+class TabExpander:
+    def __init__(self, tab_size: int = 4):
+        self._tab_size: int = tab_size
+        self._tab_indices = []
+
+    def expand(self, text: str):
+        sio = StringIO()
+        vi = 0
+        for c in text:
+            if c == '\t':
+                space_count = self._tab_size - (vi % self._tab_size)
+                sio.write(' ' * space_count)
+                vi += space_count
+            else:
+                sio.write(c)
+                vi += 1
+        return sio.getvalue()

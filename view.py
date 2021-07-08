@@ -225,6 +225,23 @@ class View(FocusTarget):
         self._semantic_highlights[y].append((col, length, token_type))
 
     def process_semantic_highlight(self, y: int, text: str, res: typing.List[VisualToken]):
+        type_colors = {
+            "class": 16,
+            "comment": 17,
+            "concept": 18,
+            "dependent": 19,
+            "enum": 20,
+            "enumMember": 21,
+            "function": 22,
+            "macro": 23,
+            "method": 24,
+            "namespace": 25,
+            "parameter": 26,
+            "property": 27,
+            "type": 28,
+            "typeParameter": 29,
+            "variable": 30,
+        }
         if y in self._semantic_highlights:
             line = self._doc.get_row(y)
             x = 0
@@ -234,7 +251,10 @@ class View(FocusTarget):
                     res.append(VisualToken(x, text[x:vcol]))
                     x = vcol
                 res.append(VisualToken(x, text[x:x + length]))
-                res[-1].set_color(6)
+                color = 16
+                if token_type in type_colors:
+                    color = type_colors.get(token_type)
+                res[-1].set_color(color)
                 x += length
             if x < len(text):
                 res.append(VisualToken(x, text[x:]))

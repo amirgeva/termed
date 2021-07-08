@@ -19,7 +19,7 @@ class ColorDialog(FormDialog):
         self.sample.set_text('Sample')
         self.sample.disable_border()
         self.add_widget(self.sample)
-        for i in range(1, 16):
+        for i in range(1, 32):
             name = f'Pair {i}'
             for field in dir(Color):
                 value = getattr(Color, field)

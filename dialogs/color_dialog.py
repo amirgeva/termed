@@ -3,7 +3,7 @@ from dialogs.dialog import FormDialog
 from dialogs.text_widget import TextWidget
 from dialogs.wlist import ListWidget
 from utils import center_rect
-from color import Color
+from color import color_name
 import config
 
 
@@ -20,14 +20,8 @@ class ColorDialog(FormDialog):
         self.sample.disable_border()
         self.add_widget(self.sample)
         for i in range(1, 32):
-            name = f'Pair {i}'
-            for field in dir(Color):
-                value = getattr(Color, field)
-                if isinstance(value, int) and value == i:
-                    name = field
-                    break
+            name = color_name(i)
             self._pair_list.add_item(name)
-            # sample = TextWidget(self.subwin(22, 3 + i, 10, 1))
         self._pair_list.listen('selection_changed', self._set_current_pair)
 
         from config import get_app

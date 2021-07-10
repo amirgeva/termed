@@ -45,7 +45,7 @@ class Document:
     def load(self, filename):
         try:
             path = os.path.abspath(filename)
-            lines = open(path).readlines()
+            lines = [line.rstrip() for line in open(path).readlines()]
             self._lines = [VisualLine(s.rstrip()) for s in lines]
             self._path = path
         except OSError:

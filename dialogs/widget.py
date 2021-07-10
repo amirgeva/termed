@@ -45,9 +45,11 @@ class Widget(FocusTarget):
 
     def on_focus(self):
         get_app().cursor(self._cursor_on)
+        self._window.set_border_type(1)
         return self
 
     def on_leave_focus(self):
+        self._window.set_border_type(0)
         return self
 
     def is_focus(self):
@@ -63,4 +65,3 @@ class Widget(FocusTarget):
 
     def action_enter(self):
         self.speak('enter')
-

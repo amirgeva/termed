@@ -1,4 +1,5 @@
 import typing
+import re
 from collections import OrderedDict, defaultdict
 from cursor import Cursor
 from visual_token import VisualToken
@@ -9,10 +10,12 @@ from geom import Point, Range
 from focus import FocusTarget
 from window import Window
 from doc import Document
-from color import Color
+from color import Color, type_colors
 from menus import Menu, fill_menu
 import logger
 import pyperclip
+
+word_pattern = re.compile(r'(\w+)')
 
 
 # noinspection PyTypeChecker
@@ -37,7 +40,8 @@ class View(FocusTarget):
         self._semantic_highlights = defaultdict(list)
         self.create_menu()
 
-    def modification_callback(self, doc: Document, row: int):
+    @staticmethod
+    def modification_callback(doc: Document, row: int):
         config.get_app().on_modify(doc, row)
 
     def get_window(self):
@@ -229,23 +233,6 @@ class View(FocusTarget):
         self._semantic_highlights[y].append((col, length, token_type))
 
     def process_semantic_highlight(self, y: int, text: str, res: typing.List[VisualToken]):
-        type_colors = {
-            "class": 16,
-            "comment": 17,
-            "concept": 18,
-            "dependent": 19,
-            "enum": 20,
-            "enumMember": 21,
-            "function": 22,
-            "macro": 23,
-            "method": 24,
-            "namespace": 25,
-            "parameter": 26,
-            "property": 27,
-            "type": 28,
-            "typeParameter": 29,
-            "variable": 30,
-        }
         if y in self._semantic_highlights:
             line = self._doc.get_row(y)
             x = 0
@@ -440,7 +427,7 @@ class View(FocusTarget):
         self._find_options = options
         self.action_find_replace_next()
 
-    def _find_regex_in_row(self, row_text: str, find_text: str, from_x: int):
+    def _find_regex_in_row(self, row_text: str, from_x: int):
         m = self._find_options.regex_pattern.search(row_text, from_x)
         if m:
             return m.start()
@@ -448,7 +435,7 @@ class View(FocusTarget):
 
     def _find_in_row(self, row_text: str, find_text: str, from_x: int):
         if self._find_options.regex:
-            return self._find_regex_in_row(row_text, find_text, from_x)
+            return self._find_regex_in_row(row_text, from_x)
         if not self._find_options.case:
             row_text = row_text.upper()
             find_text = find_text.upper()
@@ -534,8 +521,47 @@ class View(FocusTarget):
             n = self._doc.get_row(-1).get_logical_len() - self._cursor.x
             self.process_movement(Point(n, m), 0)
 
+    def move_word_left(self, flags):
+        if self._doc:
+            x, y = self._cursor.x, self._cursor.y
+            text = self._doc.get_row(y).get_logical_text()
+            tokens = list(re.finditer(word_pattern, text[0:x]))
+            if tokens:
+                self.process_movement(Point(tokens[-1].span()[0] - x, 0), flags)
+            elif y > 0:
+                if flags == config.SHIFTED:
+                    self.action_select_up()
+                    self.action_select_end()
+                else:
+                    self.action_move_up()
+                    self.action_move_end()
+
     def action_move_word_left(self):
-        pass
+        self.move_word_left(0)
+
+    def move_word_right(self, flags):
+        if self._doc:
+            x, y = self._cursor.x, self._cursor.y
+            text = self._doc.get_row(y).get_logical_text()
+            text = text[x:]
+            tokens = list(re.finditer(word_pattern, text))
+            default = True
+            if tokens:
+                if tokens[0].span()[0] == 0:
+                    del tokens[0]
+                if tokens:
+                    self.process_movement(Point(tokens[0].span()[0], 0), flags)
+                    default = False
+            if default and y < self._doc.size() - 1:
+                if flags == config.SHIFTED:
+                    self.action_select_down()
+                    self.action_select_home()
+                else:
+                    self.action_move_down()
+                    self.action_move_home()
+
+    def action_move_word_right(self):
+        self.move_word_right(0)
 
     def action_select_left(self):
         self.process_movement(Point(-1, 0), config.SHIFTED)
@@ -571,6 +597,12 @@ class View(FocusTarget):
             m = self._doc.size() - self._cursor.y
             n = self._doc.get_row(-1).get_logical_len() - self._cursor.x
             self.process_movement(Point(n, m), config.SHIFTED)
+
+    def action_select_word_left(self):
+        self.move_word_left(config.SHIFTED)
+
+    def action_select_word_right(self):
+        self.move_word_right(config.SHIFTED)
 
     def action_copy(self):
         if self._selection is not None:

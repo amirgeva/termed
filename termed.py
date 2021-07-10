@@ -311,11 +311,19 @@ class Application(Screen):
                     # logger.logwrite(f'key: {key}')
         return True
 
+    def on_modify(self, doc: Document, row: int):
+        path = doc.get_path()
+        if self.lsp.is_open_file(path):
+            if row < 0:
+                self.lsp.modify_source_file(path, self.focus.get_doc().get_text(True))
+            else:
+                self.lsp.modify_source_line(path, row, doc.get_row(row).get_logical_text())
+
     def get_suggestions(self):
         doc: Document = self.focus.get_doc()
         path = doc.get_path()
         if self.lsp.is_open_file(path):
-            self.lsp.modify_source_file(path, doc.get_text())
+            self.lsp.modify_source_file(path, doc.get_text(True))
             cursor = self.focus.get_cursor()
             col, row = cursor.x, cursor.y
             self.lsp.request_completion(path, row, col, self.handle_suggestions)

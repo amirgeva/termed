@@ -23,6 +23,7 @@ class View(FocusTarget):
         self._doc = doc
         if doc:
             doc.set_view(self)
+            doc.add_modification_callback(self.modification_callback)
         self._visual_offset = Point(0, 0)
         self._selection: Range = None
         self._find_options: FindOptions = None
@@ -35,6 +36,9 @@ class View(FocusTarget):
         self._menu = Menu('')
         self._semantic_highlights = defaultdict(list)
         self.create_menu()
+
+    def modification_callback(self, doc: Document, row: int):
+        config.get_app().on_modify(doc, row)
 
     def get_window(self):
         return self._window

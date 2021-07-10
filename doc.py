@@ -19,9 +19,13 @@ class Document:
         self._undoing = False
         self._path = ''
         self._view = view
+        self._modification_callbacks = []
         if filename:
             if not self.load(filename):
                 raise IOError()
+
+    def add_modification_callback(self, cb):
+        self._modification_callbacks.append(cb)
 
     def clear(self):
         self._lines = [VisualLine('')]
@@ -63,6 +67,10 @@ class Document:
                         f.write(text)
                 self.set_modified(False)
 
+    def mark_modified(self, y: int):
+        for cb in self._modification_callbacks:
+            cb(self, y)
+
     def set_modified(self, state: bool):
         self._modified = state
 
@@ -78,8 +86,10 @@ class Document:
     def get_row(self, y: int) -> VisualLine:
         return self._lines[y]
 
-    def get_text(self):
+    def get_text(self, rows=False):
         lines = [line.get_logical_text() for line in self._lines]
+        if rows:
+            return lines
         return '\n'.join(lines)
 
     def insert_text(self, cursor: Cursor, text: str):
@@ -90,12 +100,14 @@ class Document:
         if not self._undoing:
             self._undo_stack.append([self._view.get_cursor(), self.delete_block, cursor.y, x, x + len(text)])
         line.insert(x, text)
+        self.mark_modified(cursor.y)
 
     def split_line(self, cursor: Cursor):
         self.set_modified(True)
         line = self.get_row(cursor.y)
         line = line.split(cursor.x)
         self.insert(line, cursor.y + 1)
+        self.mark_modified(-1)
         if not self._undoing:
             self._undo_stack.append([self._view.get_cursor(), self.join_next_row, cursor.y])
 
@@ -109,6 +121,7 @@ class Document:
                     [self._view.get_cursor(), self.split_line, Cursor(row.get_logical_len(), row_index)])
             row.extend(next_row)
             self.set_modified(True)
+            self.mark_modified(-1)
 
     def delete(self, cursor: Cursor):
         line = self.get_row(cursor.y)
@@ -118,6 +131,7 @@ class Document:
                 self._undo_stack.append(
                     [self._view.get_cursor(), self.insert_text, cursor, line.get_logical_text()[cursor.x]])
             line.erase(cursor.x)
+            self.mark_modified(cursor.y)
         elif cursor.y < (self.size() - 1):
             self.set_modified(True)
             self.join_next_row(cursor.y)
@@ -141,6 +155,7 @@ class Document:
             if not self._undoing:
                 self._undo_stack.append([self._view.get_cursor(), self.insert, self._lines[index], index])
             del self._lines[index]
+            self.mark_modified(-1)
 
     def delete_block(self, y: int, x0: int, x1: int):
         self.set_modified(True)
@@ -154,10 +169,12 @@ class Document:
                 self._undo_stack.append(
                     [self._view.get_cursor(), self.insert_text, Cursor(x0, y), line.get_logical_text()[x0:(x0 + n)]])
             line.erase(x0, n)
+            self.mark_modified(y)
 
     def insert(self, line: VisualLine, at: int):
         self.set_modified(True)
         self._lines.insert(at, line)
+        self.mark_modified(-1)
 
     def set_cursor(self, cursor: Cursor):
         if cursor.y < 0:

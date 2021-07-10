@@ -22,6 +22,7 @@ class Window:
             self.size_preference = Point(5, 5)
         self._border = self.rect.height() > 2
         self._border_type = 0
+        self._color = Color.BORDER
         self._title = ''
         self._footnotes = {}
 
@@ -30,6 +31,7 @@ class Window:
 
     def set_border_type(self, btype):
         self._border_type = btype
+        self._color = Color.BORDER if btype == 0 else Color.BORDER_HIGHLIGHT
 
     def set_footnote(self, pos: int, text: str):
         self._footnotes[pos] = text
@@ -52,7 +54,7 @@ class Window:
         return self.rect
 
     def clear(self):
-        get_app().fill_rect(self.rect, ' ', Color.BORDER)
+        get_app().fill_rect(self.rect, ' ', self._color)
 
     def width(self) -> int:
         w = self.rect.width()
@@ -81,18 +83,18 @@ class Window:
 
     def render(self):
         if self._border:
-            get_app().draw_frame(self.rect, Color.BORDER, self._border_type)
+            get_app().draw_frame(self.rect, self._color, self._border_type)
             if len(self._title) > 0:
                 self.render_title()
             x = self.width() - 2
             for order in sorted(self._footnotes.keys()):
                 text = self._footnotes.get(order)
                 x -= len(text) + 3
-                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text, Color.BORDER, self._border_type)
+                get_app().draw_frame_text(Point(x, self.rect.bottom() - 1), text, self._color, self._border_type)
 
     def render_title(self):
         if self._border:
-            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title, Color.BORDER, self._border_type)
+            get_app().draw_frame_text(self.rect.pos + Point(1, 0), self._title, self._color, self._border_type)
 
     def draw_top_frame_text(self, pos: int, text: str, color: int):
         get_app().draw_frame_text(self.rect.pos + Point(pos, 0), text, color, self._border_type)

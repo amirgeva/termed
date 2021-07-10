@@ -63,6 +63,14 @@ def call_by_name(obj, func_name, *args):
     return False
 
 
+def clamp_str(s, n, add_spaces: bool = True):
+    if len(s) > n:
+        return s[0:n]
+    if len(s) < n:
+        return s + ' ' * (n - len(s))
+    return s
+
+
 class TabExpander:
     def __init__(self, tab_size: int = 4):
         self._tab_size: int = tab_size

@@ -128,6 +128,30 @@ class DirTreePlugin(WindowPlugin):
             self._cur_y += 1
             self._ensure_visible()
 
+    def action_move_pgdn(self):
+        h = self._window.height()
+        if self._cur_y < (len(self._all_lines) - h - 1):
+            self._cur_y += h
+        else:
+            self._cur_y = len(self._all_lines) - 1
+        self._ensure_visible()
+
+    def action_move_pgup(self):
+        h = self._window.height()
+        if self._cur_y >= h:
+            self._cur_y -= h
+        else:
+            self._cur_y = 0
+        self._ensure_visible()
+
+    def action_move_home(self):
+        self._cur_y = 0
+        self._ensure_visible()
+
+    def action_move_end(self):
+        self._cur_y = len(self._all_lines) - 1
+        self._ensure_visible()
+
     def action_move_up(self):
         if self._cur_y > 0:
             self._cur_y -= 1

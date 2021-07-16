@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 import sys
 from typing import List, Dict
-import logger
+from collections import defaultdict
 import json
-from geom import Rect
 from doc import Document
 from view import View
-from cursor import Cursor
 from screen import Screen
 from wm import WindowManager
-from utils import call_by_name
+from utils import *
 from plugin import *
 import config
 import traceback
@@ -21,25 +19,30 @@ from dialogs.file_dialog import FileDialog
 from dialogs.color_dialog import ColorDialog
 from dialogs.find_dialog import FindDialog
 from dialogs.plugins_dialog import PluginsDialog
+from dialogs.wlist import ListWidget
 from lspclient.client import LSPClient
 
 
 class Application(Screen):
+    # noinspection PyTypeChecker
     def __init__(self):
         super().__init__()
         self.menu_bar = Menu('')
         self.shortcuts = {}
-        self.main_view = None
+        self.main_view: View = None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
         self.focus = None
         self.terminating = False
+        self.modified = True
         self.active_plugins: Dict[str, Plugin] = {}
         self._root = config.work_dir
         self.lsp = LSPClient(self._root)
         FocusTarget.add(self)
-        # self.activate_plugins()
+        # noinspection PyTypeChecker
+        self._completion_list: ListWidget = None
+        self._completion_items: Dict[str, List[str]] = defaultdict(list)
 
     def close(self):
         open_docs = self.main_view.get_all_open_tabs()
@@ -67,36 +70,25 @@ class Application(Screen):
                 open_count += 1
         if open_count > 0:
             self.main_view.close_empty_tab()
-            doc: Document = self.main_view.get_doc()
-            n = doc.rows_count()
-            self.lsp.request_coloring(doc.get_path(), self.handle_coloring)
+
+    def handle_full_coloring(self, msg):
+        self.main_view.get_doc().clear_semantic_highlight(-1)
+        self.handle_coloring(msg)
+
+    def handle_row_coloring(self, msg):
+        self.handle_coloring(msg)
 
     def handle_coloring(self, msg):
-        tokens, modifiers = self.lsp.get_coloring_legend()
-        if 'result' in msg and 'data' in msg.get('result'):
-            data = msg['result']['data']
-            logger.logwrite(str(data))
-            n = len(data)
-            i = 0
-            self.main_view.clear_semantic_highlight()
-            prev_row = 0
-            prev_col = 0
-            while i < n:
-                row = data[i] + prev_row
-                if row != prev_row:
-                    prev_col = 0
-                col = data[i + 1] + prev_col
-                prev_row = row
-                prev_col = col
-                length = data[i + 2]
-                type_index = data[i + 3]
-                mod_bits = data[i + 4]
-                i += 5
-                try:
-                    type_name = tokens[type_index]
-                except IndexError:
-                    type_name = "Unknown"
-                self.main_view.add_semantic_highlight(row, col, length, type_name)
+        if 'error' in msg:
+            logger.logwrite(msg['error'])
+            return
+        tokens, _ = self.lsp.get_coloring_legend()
+        coloring, result_id = parse_coloring_message(msg, tokens)
+        self.main_view.set_coloring_id(result_id)
+        for item in coloring:
+            self.main_view.get_doc().clear_semantic_highlight(item.row)
+        for item in coloring:
+            self.main_view.get_doc().add_semantic_highlight(item.row, item.col, item.length, item.type_name)
 
     def set_main_view(self, view):
         self.main_view = view
@@ -224,7 +216,7 @@ class Application(Screen):
     def activate_plugins(self):
         cfg_plugins = set(config.get_value('active_plugins').split(' '))
         current = self.active_plugins.keys()
-        new_active = {}
+        new_active: Dict[str, Plugin] = {}
         for name in current:
             p = self.active_plugins.get(name)
             if name not in cfg_plugins:
@@ -264,6 +256,8 @@ class Application(Screen):
         #        plugin.render()
         if self.focus is not None:
             self.focus.render()
+        if self._completion_list is not None:
+            self._completion_list.render()
 
     def process_shortcuts(self, key):
         if key in self.shortcuts:
@@ -293,6 +287,9 @@ class Application(Screen):
         if self.terminating:
             return False
         key = self.getkey()
+        if key is None:
+            self.on_no_input()
+            return True
         if key == 'KEY_F(12)':
             return False
         if self.process_shortcuts(key):
@@ -311,13 +308,35 @@ class Application(Screen):
                     # logger.logwrite(f'key: {key}')
         return True
 
+    def on_no_input(self):
+        if self.modified:
+            doc = self.main_view.get_doc()
+            path = doc.get_path()
+            self.lsp.request_coloring(path, '', self.handle_full_coloring)
+            self.modified = False
+
     def on_modify(self, doc: Document, row: int):
         path = doc.get_path()
+        self.modified = True
+        if self._completion_list:
+            self.update_completion_list()
         if self.lsp.is_open_file(path):
             if row < 0:
                 self.lsp.modify_source_file(path, self.focus.get_doc().get_text(True))
+                # self.lsp.request_coloring(path, '', self.handle_full_coloring)
             else:
                 self.lsp.modify_source_line(path, row, doc.get_row(row).get_logical_text())
+                # self.lsp.request_coloring(path, doc.get_last_coloring_id(), self.handle_row_coloring)
+
+    def update_completion_list(self):
+        word, _ = self.main_view.get_recent_word()
+        self._completion_list.clear()
+        for name in sorted(self._completion_items.keys()):
+            if word:
+                if word in name:
+                    self._completion_list.add_item(name)
+            else:
+                self._completion_list.add_item(name)
 
     def get_suggestions(self):
         doc: Document = self.focus.get_doc()
@@ -330,17 +349,39 @@ class Application(Screen):
 
     def handle_suggestions(self, msg):
         logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
+        if 'result' in msg and 'items' in msg['result']:
+            y, x = self.cursor_position()
+            self._completion_list = ListWidget(Window(Rect(x, y + 1, 30, 5)))
+            self._completion_list.listen('enter', self._use_suggestion)
+            items = msg['result']['items']
+            self._completion_items = defaultdict(list)
+            for item in items:
+                self._completion_items[item['filterText']].append(item['label'])
+            for name in sorted(self._completion_items.keys()):
+                self._completion_list.add_item(name)
+
+    def _use_suggestion(self):
+        if self._completion_list is None:
+            return
+        selection, _ = self._completion_list.get_selection()
+        logger.logwrite(f'Selected: "{selection}"')
+        self._completion_list = None
+        self.main_view.complete(selection)
 
     def on_action(self, action):
         if not super().on_action(action):
             func_name = f'action_{action}'
-            if not call_by_name(self.focus, func_name):
-                for plugin_name in self.active_plugins.keys():
-                    plugin = self.active_plugins.get(plugin_name)
-                    if call_by_name(plugin, 'global_' + func_name):
-                        return True
-                if hasattr(self.focus, 'on_action'):
-                    self.focus.on_action(action)
+            if self._completion_list is not None:
+                if call_by_name(self._completion_list, func_name):
+                    return False
+            if call_by_name(self.focus, func_name):
+                return False
+            for plugin_name in self.active_plugins.keys():
+                plugin = self.active_plugins.get(plugin_name)
+                if call_by_name(plugin, 'global_' + func_name):
+                    return True
+            if hasattr(self.focus, 'on_action'):
+                self.focus.on_action(action)
         return False
 
     def place_cursor(self):
@@ -382,6 +423,11 @@ class Application(Screen):
 
     def action_colors(self):
         self.set_focus(ColorDialog())
+
+    def action_escape(self):
+        if self._completion_list:
+            self._completion_list = None
+            self._completion_items = defaultdict(list)
 
     def action_next_view(self):
         n = len(self.views)

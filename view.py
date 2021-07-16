@@ -1,6 +1,6 @@
 import typing
 import re
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from cursor import Cursor
 from visual_token import VisualToken
 from visual_line import VisualLine
@@ -12,7 +12,6 @@ from window import Window
 from doc import Document
 from color import Color, type_colors
 from menus import Menu, fill_menu
-import logger
 import pyperclip
 
 word_pattern = re.compile(r'(\w+)')
@@ -37,12 +36,14 @@ class View(FocusTarget):
         self._current_tab = ''
         self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('', self)))])
         self._menu = Menu('')
-        self._semantic_highlights = defaultdict(list)
         self.create_menu()
 
     @staticmethod
     def modification_callback(doc: Document, row: int):
         config.get_app().on_modify(doc, row)
+
+    def set_coloring_id(self, coloring_id: str):
+        self._doc.set_coloring_id(coloring_id)
 
     def get_window(self):
         return self._window
@@ -64,6 +65,7 @@ class View(FocusTarget):
         path = doc.get_path()
         if path not in self._tabs:
             self._tabs[path] = self._generate_tab(doc)
+        doc.add_modification_callback(self.modification_callback)
         self.switch_tab(path)
 
     def action_close_tab(self):
@@ -125,6 +127,7 @@ class View(FocusTarget):
             setattr(self, field, new_settings.get(field))
         self._tabs[old_path] = old_settings
         self._current_tab = new_path
+        config.get_app().on_modify(self._doc, -1)
 
     def get_doc(self) -> Document:
         return self._doc
@@ -144,7 +147,7 @@ class View(FocusTarget):
 
     def move_cursor(self, dx: int, dy: int, move_selection: bool):
         if move_selection:
-            if self._selection.empty():
+            if self._selection is None or self._selection.empty():
                 self._selection = Range(self._cursor.clone(), self._cursor.clone())
             self.move_a_cursor(self._selection.stop, dx, dy)
         elif not self._selection.empty():
@@ -161,6 +164,36 @@ class View(FocusTarget):
             x = line.get_visual_index(c.x) - self._visual_offset.x
             return x, y
         return 0, 0
+
+    def get_recent_word(self):
+        '''
+        :return: Current typed word, and an indicator
+                 if cursor is not at the beginning of the word
+        '''
+        c = self._cursor
+        line = self._doc.get_row(c.y)
+        line_text = line.get_logical_text()
+        for token in re.finditer(word_pattern, line_text):
+            start = token.start()
+            end = token.end()
+            if start <= c.x <= end:
+                return line_text[start:end], c.x > start
+        return '', False
+
+    def complete(self, text: str):
+        '''
+        Fill in auto complete.   If a partial word is already typed,
+        erase it first.
+        :param text:
+        :return:
+        '''
+        word, middle = self.get_recent_word()
+        if word:
+            if middle:
+                self.action_move_word_left()
+            self.move_cursor(len(word), 0, True)
+            self.delete_selection()
+        self.insert_text(text)
 
     def insert_text(self, full_text: str):
         text_lines = full_text.split('\n')
@@ -225,22 +258,16 @@ class View(FocusTarget):
         if not self.delete_selection():
             self.set_cursor(self._doc.backspace(self._cursor))
 
-    def clear_semantic_highlight(self):
-        self._semantic_highlights = defaultdict(list)
-
-    def add_semantic_highlight(self, y: int, col: int, length: int, token_type: str):
-        logger.logwrite(f'Highlight: y={y} col={col} length={length} type={token_type}')
-        self._semantic_highlights[y].append((col, length, token_type))
-
     def process_semantic_highlight(self, y: int, text: str, res: typing.List[VisualToken]):
-        if y in self._semantic_highlights:
+        semantic_highlights = self._doc.get_semantic_highlights()
+        if y in semantic_highlights:
             line = self._doc.get_row(y)
             x = 0
-            for col, length, token_type in self._semantic_highlights.get(y):
-                vcol = line.get_visual_index(col)
-                if vcol > x:
-                    res.append(VisualToken(x, text[x:vcol]))
-                    x = vcol
+            for col, length, token_type in semantic_highlights.get(y):
+                visual_column = line.get_visual_index(col)
+                if visual_column > x:
+                    res.append(VisualToken(x, text[x:visual_column]))
+                    x = visual_column
                 res.append(VisualToken(x, text[x:x + length]))
                 color = 16
                 if token_type in type_colors:

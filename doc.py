@@ -3,6 +3,8 @@ from typing import List
 from visual_line import VisualLine
 from geom import Point
 from cursor import Cursor
+from collections import defaultdict
+import logger
 
 
 class Compound:
@@ -14,18 +16,40 @@ class Compound:
 class Document:
     def __init__(self, filename: str, view):
         self._lines: List[VisualLine] = [VisualLine('')]
+        self._last_coloring_id: str = ''
         self._modified = False
         self._undo_stack = []
         self._undoing = False
         self._path = ''
         self._view = view
         self._modification_callbacks = []
+        self._semantic_highlights = defaultdict(list)
         if filename:
             if not self.load(filename):
                 raise IOError()
 
+    def clear_semantic_highlight(self, row: int):
+        if row < 0:
+            self._semantic_highlights = defaultdict(list)
+        else:
+            self._semantic_highlights[row] = []
+
+    def add_semantic_highlight(self, y: int, col: int, length: int, token_type: str):
+        # logger.logwrite(f'Highlight: y={y} col={col} length={length} type={token_type}')
+        self._semantic_highlights[y].append((col, length, token_type))
+
+    def get_semantic_highlights(self):
+        return self._semantic_highlights
+
+    def set_coloring_id(self, coloring_id: str):
+        self._last_coloring_id = coloring_id
+
+    def get_last_coloring_id(self):
+        return self._last_coloring_id
+
     def add_modification_callback(self, cb):
-        self._modification_callbacks.append(cb)
+        if cb not in self._modification_callbacks:
+            self._modification_callbacks.append(cb)
 
     def clear(self):
         self._lines = [VisualLine('')]

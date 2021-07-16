@@ -1,3 +1,5 @@
+import logger
+from dataclasses import dataclass
 from geom import Point, Rect
 from io import StringIO
 
@@ -88,3 +90,56 @@ class TabExpander:
                 sio.write(c)
                 vi += 1
         return sio.getvalue()
+
+
+@dataclass
+class ColoringItem:
+    row: int
+    col: int
+    length: int
+    type_name: str
+
+
+def parse_coloring_data(data, tokens):
+    res = []
+    # logger.logwrite(str(data))
+    n = len(data)
+    i = 0
+    prev_row = 0
+    prev_col = 0
+    while i < n:
+        row = data[i] + prev_row
+        if row != prev_row:
+            prev_col = 0
+        col = data[i + 1] + prev_col
+        prev_row = row
+        prev_col = col
+        length = data[i + 2]
+        type_index = data[i + 3]
+        # mod_bits = data[i + 4]
+        i += 5
+        try:
+            type_name = tokens[type_index]
+        except IndexError:
+            type_name = "Unknown"
+        res.append(ColoringItem(row, col, length, type_name))
+    return res
+
+
+def parse_coloring_message(msg, tokens):
+    res = []
+    if 'result' not in msg:
+        return res, ''
+    result = msg['result']
+    result_id = result['resultId']
+    data = []
+    if 'data' in result:
+        res.extend(parse_coloring_data(result['data'], tokens))
+    if 'edits' in result:
+        edits = result['edits']
+        for edit in edits:
+            data = edit['data']
+            del_count = edit['deleteCount']
+            start = edit['start']
+            res.extend(parse_coloring_data(data, tokens))
+    return res, result_id

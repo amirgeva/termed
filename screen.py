@@ -19,6 +19,7 @@ class Screen(Base):
         self.scr = curses.initscr()
         curses.noecho()
         curses.raw()
+        self.scr.timeout(1000)
         self.scr.keypad(True)
         mx = self.scr.getmaxyx()
         self.size = mx[1], mx[0]
@@ -78,6 +79,9 @@ class Screen(Base):
             self.scr.move(pos.y, pos.x)
             return True
         return False
+
+    def cursor_position(self):
+        return self.scr.getyx()
 
     @staticmethod
     def cursor(state):
@@ -148,15 +152,19 @@ class Screen(Base):
             return 0
 
     def getkey(self):
+        key = None
         try:
-            self.scr.nodelay(False)
+            # self.scr.nodelay(False)
             key = self.scr.getkey()
             if len(key) == 1 and ord(key[0]) == 27:
+                key = 'ESC'
                 self.scr.nodelay(True)
                 key = "Alt+" + self.scr.getkey()
                 self.scr.nodelay(False)
-        except curses.error:
-            key = 'ESC'
+                self.scr.timeout(1000)
+        except curses.error as e:
+            if e.args[0] == 'no input':
+                return key
         return key
 
     def close(self):

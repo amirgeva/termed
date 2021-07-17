@@ -141,6 +141,9 @@ class Rect(object):
     def height(self):
         return self.size.y
 
+    def area(self):
+        return self.width() * self.height()
+
     def right(self):
         return self.pos.x + self.size.x
 
@@ -153,7 +156,7 @@ class Rect(object):
     def inflate(self, d):
         if isinstance(d, Point):
             self.pos -= d
-            self.size += d+d
+            self.size += d + d
         else:
             self.pos -= Point(d, d)
             self.size += Point(2 * d, 2 * d)
@@ -164,3 +167,29 @@ class Rect(object):
             p = Point(p)
         p -= self.pos
         return 0 <= p.x < self.size.x and 0 <= p.y < self.size.y
+
+    def contains(self, other):
+        if isinstance(other, Point):
+            return self.is_point_inside(other)
+        if isinstance(other, Rect):
+            return self.intersection(other).area() == other.area()
+        return False
+
+    def intersection(self, other):
+        if isinstance(other, Point):
+            if self.is_point_inside(other):
+                return Rect(self)
+            return Rect(0, 0, 0, 0)
+        if isinstance(other, Rect):
+            x = max(self.pos.x, other.pos.x)
+            y = max(self.pos.y, other.pos.y)
+            r = min(self.right(), other.right())
+            b = min(self.bottom(), other.bottom())
+            return Rect(x, y, r - x, b - y)
+        return Rect(0, 0, 0, 0)
+
+    def overlaps(self, other):
+        if isinstance(other, Rect):
+            r = self.intersection(other)
+            return r.area() > 0
+        return False

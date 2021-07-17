@@ -347,11 +347,25 @@ class Application(Screen):
             col, row = cursor.x, cursor.y
             self.lsp.request_completion(path, row, col, self.handle_suggestions)
 
+    def tip_rect(self):
+        w, h = self.size
+        wr = Rect(0, 0, w, h)
+        tw, th = 40, 23
+        y, x = self.cursor_position()
+        r = Rect(x, y + 1, tw, th)
+        ir = wr.intersection(r)
+        if ir.width() < tw:
+            r = Rect(x - tw, y + 1, tw, th)
+            ir = wr.intersection(r)
+        if ir.height() < th:
+            r = Rect(r.pos.x, y - th, tw, th)
+        return r
+
     def handle_suggestions(self, msg):
         logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
         if 'result' in msg and 'items' in msg['result']:
-            y, x = self.cursor_position()
-            self._completion_list = ListWidget(Window(Rect(x, y + 1, 30, 5)))
+            # self._completion_list = ListWidget(Window(Rect(x, y + 1, 30, 5)))
+            self._completion_list = ListWidget(Window(self.tip_rect()))
             self._completion_list.listen('enter', self._use_suggestion)
             items = msg['result']['items']
             self._completion_items = defaultdict(list)

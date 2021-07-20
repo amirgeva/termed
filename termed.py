@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 from typing import List, Dict
 from collections import defaultdict
 import json
@@ -312,7 +313,8 @@ class Application(Screen):
         if self.modified:
             doc = self.main_view.get_doc()
             path = doc.get_path()
-            self.lsp.request_coloring(path, '', self.handle_full_coloring)
+            if os.path.isfile(path):
+                self.lsp.request_coloring(path, '', self.handle_full_coloring)
             self.modified = False
 
     def on_modify(self, doc: Document, row: int):

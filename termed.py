@@ -4,6 +4,8 @@ import os
 from typing import List, Dict
 from collections import defaultdict
 import json
+
+from cursor import Cursor
 from doc import Document
 from view import View
 from screen import Screen
@@ -185,7 +187,8 @@ class Application(Screen):
             self.lsp.open_source_file(path)
             self.set_focus(self.main_view)
             if row >= 0 and col >= 0:
-                self.main_view.set_cursor(Point(col, row))
+                row = min(row, self.main_view.get_doc().size() - 1)
+                self.main_view.set_cursor(Cursor(col, row))
             self.render()
         except IOError:
             d = PromptDialog('Error', f'File {path} not found', ['Ok'])
@@ -221,7 +224,7 @@ class Application(Screen):
             self.activate_plugins()
 
     def activate_plugins(self):
-        cfg_plugins = set(config.get_value('active_plugins','output').split(' '))
+        cfg_plugins = set(config.get_value('active_plugins', 'output').split(' '))
         current = self.active_plugins.keys()
         new_active: Dict[str, Plugin] = {}
         for name in current:

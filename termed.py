@@ -30,6 +30,7 @@ class Application(Screen):
         self.menu_bar = Menu('')
         self.shortcuts = {}
         self.main_view: View = None
+        self.output_view: View = None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
@@ -51,6 +52,11 @@ class Application(Screen):
         self.lsp.shutdown()
         for plugin_name in self.active_plugins:
             self.active_plugins[plugin_name].shutdown()
+
+    def get_plugin(self, name):
+        if name in self.active_plugins:
+            return self.active_plugins.get(name)
+        return None
 
     def reopen_session(self):
         paths = [path for path in config.local_get_value('open_docs').split(',') if path]
@@ -214,7 +220,7 @@ class Application(Screen):
             self.activate_plugins()
 
     def activate_plugins(self):
-        cfg_plugins = set(config.get_value('active_plugins').split(' '))
+        cfg_plugins = set(config.get_value('active_plugins','output').split(' '))
         current = self.active_plugins.keys()
         new_active: Dict[str, Plugin] = {}
         for name in current:

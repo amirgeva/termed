@@ -260,6 +260,9 @@ class View(FocusTarget):
         self.set_cursor(Cursor(len(white_prefix), self._cursor.y))
         self.redraw_all()
 
+    def clear_selection(self):
+        self._selection = None
+
     def action_delete(self):
         if not self.delete_selection():
             self._doc.delete(self._cursor)

@@ -18,6 +18,7 @@ class OutputPlugin(WindowPlugin):
 
     def clear(self):
         self._doc.clear()
+        self._view.clear_selection()
         self._view.set_cursor(Cursor(0, 0))
 
     def add_text(self, text: str):
@@ -47,6 +48,9 @@ class OutputPlugin(WindowPlugin):
                     col = int(g[2])
                     if path.startswith(source_root):
                         config.get_app().open_file(path, row - 1, col - 1)
+                        self._view.clear_selection()
+                        self._view.set_cursor(Cursor(0, self._error_index))
+                        self._view.action_select_down()
                 except ValueError:
                     pass
                 return

@@ -10,7 +10,6 @@ class MakerPlugin(Plugin):
         super().__init__()
         self._root = os.path.join(config.work_dir, 'build')
         self._offset = 0
-        self._error_index = 0
 
     def global_action_make(self):
         return self.action_make()

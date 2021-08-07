@@ -60,7 +60,9 @@ def center_text(text, width):
 def call_by_name(obj, func_name, *args):
     if hasattr(obj, func_name):
         f = getattr(obj, func_name)
-        f(*args)
+        res = f(*args)
+        if isinstance(res, bool):
+            return res
         return True
     return False
 

@@ -165,6 +165,8 @@ class Screen(Base):
         except curses.error as e:
             if e.args[0] == 'no input':
                 return key
+        except KeyboardInterrupt:
+            return chr(3)
         return key
 
     def close(self):

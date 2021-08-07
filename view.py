@@ -235,15 +235,24 @@ class View(FocusTarget):
         else:
             self.insert_text('\t')
 
-    def action_enter(self):
-        line_text = self._doc.get_row(self._cursor.y).get_logical_text()
+    def get_leading_space(self, y):
+        line_text = self._doc.get_row(y).get_logical_text()
         white_prefix = ''
+        found = False
         for i in range(len(line_text)):
             if line_text[i] != '\t' and line_text[i] != ' ':
+                found = True
                 white_prefix = line_text[0:i]
                 if line_text[i] == '{':
                     white_prefix += "\t"
                 break
+        if not found:
+            return line_text
+        return white_prefix
+
+    def action_enter(self):
+        y = self._cursor.y
+        white_prefix = self.get_leading_space(y)
         self._doc.split_line(self._cursor)
         self.set_cursor(Cursor(0, self._cursor.y + 1))
         self._doc.insert_text(self.get_cursor(), white_prefix)
@@ -374,6 +383,8 @@ class View(FocusTarget):
         if self._selection is None:
             return ''
         start, stop = self._selection.get_ordered()
+        if start.y == stop.y:
+            return self._doc.get_row(start.y).get_logical_text()[start.x:stop.x]
         x = start.x
         lines = []
         for y in range(start.y, stop.y):
@@ -408,8 +419,18 @@ class View(FocusTarget):
         self._selection = None
         return True
 
+    def auto_unindent(self):
+        y = self._cursor.y
+        if y > 0:
+            cur_prefix = self._doc.get_row(y).get_logical_text()
+            prev_prefix = self.get_leading_space(y - 1)
+            if cur_prefix == prev_prefix and cur_prefix.endswith('\t'):
+                self.action_backspace()
+
     def process_text_key(self, key: str):
         self.delete_selection()
+        if key == '}':
+            self.auto_unindent()
         if self._insert:
             self._doc.insert_text(self._cursor, key)
         else:
@@ -635,6 +656,12 @@ class View(FocusTarget):
         if self._selection is not None:
             text = self.get_selection_text()
             pyperclip.copy(text)
+
+    def action_cut(self):
+        if self._selection is not None:
+            text = self.get_selection_text()
+            pyperclip.copy(text)
+            self.delete_selection()
 
     def action_paste(self):
         self._doc.start_compound()

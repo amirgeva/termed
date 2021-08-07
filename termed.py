@@ -453,6 +453,7 @@ class Application(Screen):
         if self._completion_list:
             self._completion_list = None
             self._completion_items = defaultdict(list)
+        return False
 
     def action_next_view(self):
         n = len(self.views)

@@ -36,6 +36,7 @@ class View(FocusTarget):
         self._current_tab = ''
         self._tabs: typing.OrderedDict[str, dict] = OrderedDict([('', self._generate_tab(Document('', self)))])
         self._menu = Menu('')
+        self._pasting = False
         self.create_menu()
 
     @staticmethod
@@ -166,10 +167,10 @@ class View(FocusTarget):
         return 0, 0
 
     def get_recent_word(self):
-        '''
+        """
         :return: Current typed word, and an indicator
                  if cursor is not at the beginning of the word
-        '''
+        """
         c = self._cursor
         line = self._doc.get_row(c.y)
         line_text = line.get_logical_text()
@@ -181,12 +182,12 @@ class View(FocusTarget):
         return '', False
 
     def complete(self, text: str):
-        '''
+        """
         Fill in auto complete.   If a partial word is already typed,
         erase it first.
         :param text:
         :return:
-        '''
+        """
         word, middle = self.get_recent_word()
         if word:
             if middle:
@@ -252,7 +253,7 @@ class View(FocusTarget):
 
     def action_enter(self):
         y = self._cursor.y
-        white_prefix = self.get_leading_space(y)
+        white_prefix = '' if self._pasting else self.get_leading_space(y)
         self._doc.split_line(self._cursor)
         self.set_cursor(Cursor(0, self._cursor.y + 1))
         self._doc.insert_text(self.get_cursor(), white_prefix)
@@ -664,6 +665,7 @@ class View(FocusTarget):
             self.delete_selection()
 
     def action_paste(self):
+        self._pasting = True
         self._doc.start_compound()
         self.delete_selection()
         text = pyperclip.paste()

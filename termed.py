@@ -243,6 +243,7 @@ class Application(Screen):
                         self.window_manager.add_window(p.get_window())
                         self.add_view(p)
         self.active_plugins = new_active
+        self.output_view = self.get_plugin('output')
 
     def set_menu(self, bar):
         self.menu_bar = bar
@@ -387,8 +388,13 @@ class Application(Screen):
             return
         selection, _ = self._completion_list.get_selection()
         logger.logwrite(f'Selected: "{selection}"')
+        labels = self._completion_items.get(selection)
         self._completion_list = None
         self.main_view.complete(selection)
+        self.output_view.clear()
+        for label in labels:
+            if '(' in label:
+                self.output_view.add_text(label)
 
     def on_action(self, action):
         if not super().on_action(action):

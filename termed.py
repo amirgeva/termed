@@ -361,16 +361,13 @@ class Application(Screen):
     def tip_rect(self):
         w, h = self.size
         wr = Rect(0, 0, w, h)
-        tw, th = 40, 23
+        tw, th = 40, 20
         y, x = self.cursor_position()
-        r = Rect(x, y + 1, tw, th)
-        ir = wr.intersection(r)
-        if ir.width() < tw:
-            r = Rect(x - tw, y + 1, tw, th)
-            ir = wr.intersection(r)
-        if ir.height() < th:
-            r = Rect(r.pos.x, y - th, tw, th)
-        return r
+        r1 = Rect(x, y + 1, tw, th)
+        r2 = Rect(x, y - th, tw, th)
+        r1 = wr.intersection(r1)
+        r2 = wr.intersection(r2)
+        return r1 if r1.area() > r2.area() else r2
 
     def handle_suggestions(self, msg):
         logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
@@ -442,6 +439,9 @@ class Application(Screen):
     def draw_status_bar(self):
         self.move((0, self.height() - 1))
         self.write('\u2592' * (self.width() - 1), 0)
+
+    def action_suggestions(self):
+        self.get_suggestions()
 
     def action_keymap_dialog(self):
         self.set_focus(KeymapDialog())

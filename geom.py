@@ -193,3 +193,6 @@ class Rect(object):
             r = self.intersection(other)
             return r.area() > 0
         return False
+
+    def __repr__(self):
+        return f'{self.pos.x},{self.pos.y} {self.width()}x{self.height()}'

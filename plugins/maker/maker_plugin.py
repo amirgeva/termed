@@ -18,7 +18,7 @@ class MakerPlugin(Plugin):
         logwrite(f'Make in {self._root}')
         output = config.get_app().get_plugin('output')
         output.clear()
-        p = sp.Popen(['make'], stdout=sp.PIPE, stderr=sp.STDOUT, cwd=self._root)
+        p = sp.Popen(['make', '-j'], stdout=sp.PIPE, stderr=sp.STDOUT, cwd=self._root)
         for line in p.stdout:
             text = line.decode('utf-8').rstrip()
             output.add_text(text)

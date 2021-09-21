@@ -46,7 +46,10 @@ class Application(Screen):
         self._root = config.work_dir
         self._last_key = ''
         self._get_new_suggestions = False
-        self.lsp = LSPClient(self._root)
+        try:
+            self.lsp = LSPClient(self._root)
+        except FileNotFoundError:
+            self.lsp = None
         FocusTarget.add(self)
         # noinspection PyTypeChecker
         self._completion_list: ListWidget = None
@@ -56,7 +59,8 @@ class Application(Screen):
         open_docs = self.main_view.get_all_open_tabs()
         config.local_set_value('open_docs', open_docs)
         super().close()
-        self.lsp.shutdown()
+        if self.lsp is not None:
+            self.lsp.shutdown()
         for plugin_name in self.active_plugins:
             self.active_plugins[plugin_name].shutdown()
 
@@ -92,6 +96,8 @@ class Application(Screen):
         self.handle_coloring(msg)
 
     def handle_coloring(self, msg):
+        if self.lsp is None:
+            return
         if 'error' in msg:
             logger.logwrite(msg['error'])
             return
@@ -141,8 +147,9 @@ class Application(Screen):
                 else:
                     return False
             paths.append(doc.get_path())
-        for path in paths:
-            self.lsp.close_source_file(path)
+        if self.lsp is not None:
+            for path in paths:
+                self.lsp.close_source_file(path)
         return True
 
     #    def action_plugin_test(self):
@@ -188,7 +195,8 @@ class Application(Screen):
     def open_file(self, path, row=-1, col=-1):
         try:
             self.main_view.open_tab(Document(path, self.main_view))
-            self.lsp.open_source_file(path)
+            if self.lsp is not None:
+                self.lsp.open_source_file(path)
             self.set_focus(self.main_view)
             if row >= 0 and col >= 0:
                 row = min(row, self.main_view.get_doc().size() - 1)
@@ -331,7 +339,8 @@ class Application(Screen):
             doc = self.main_view.get_doc()
             path = doc.get_path()
             if os.path.isfile(path):
-                self.lsp.request_coloring(path, '', self.handle_full_coloring)
+                if self.lsp is not None:
+                    self.lsp.request_coloring(path, '', self.handle_full_coloring)
             self.modified = False
 
     def on_modify(self, doc: Document, row: int):
@@ -341,7 +350,7 @@ class Application(Screen):
         if self._completion_list:
             self.update_completion_list()
             self._get_new_suggestions = False
-        if self.lsp.is_open_file(path):
+        if self.lsp is not None and self.lsp.is_open_file(path):
             if row < 0:
                 self.lsp.modify_source_file(path, self.focus.get_doc().get_text(True))
                 # self.lsp.request_coloring(path, '', self.handle_full_coloring)
@@ -377,7 +386,7 @@ class Application(Screen):
     def get_suggestions(self):
         doc: Document = self.focus.get_doc()
         path = doc.get_path()
-        if self.lsp.is_open_file(path):
+        if self.lsp is not None and self.lsp.is_open_file(path):
             # self.lsp.modify_source_file(path, doc.get_text(True))
             cursor = self.focus.get_cursor()
             col, row = cursor.x, cursor.y

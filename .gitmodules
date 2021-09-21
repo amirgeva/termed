@@ -1,3 +1,0 @@
-[submodule "lspclient"]
-	path = lspclient
-	url = git@github.com:amirgeva/lspclient.git

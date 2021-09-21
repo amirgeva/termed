@@ -161,7 +161,7 @@ class Screen(Base):
                 self.scr.nodelay(True)
                 key = "Alt+" + self.scr.getkey()
                 self.scr.nodelay(False)
-                self.scr.timeout(1000)
+                self.scr.timeout(100)
         except curses.error as e:
             if e.args[0] == 'no input':
                 return key

@@ -314,7 +314,7 @@ class Application(Screen):
         if key is None:
             self.on_no_input()
             return True
-        if key == 'KEY_F(12)':
+        if key == 'KEY_F(36)':
             return False
         if self.process_shortcuts(key):
             return True
@@ -383,6 +383,14 @@ class Application(Screen):
             else:
                 self._completion_list.add_item(name)
 
+    def goto_definition(self):
+        doc: Document = self.focus.get_doc()
+        path = doc.get_path()
+        if self.lsp is not None and self.lsp.is_open_file(path):
+            cursor = self.focus.get_cursor()
+            col, row = cursor.x, cursor.y
+            self.lsp.request_definition(path, row, col, self.handle_definition)
+
     def get_suggestions(self):
         doc: Document = self.focus.get_doc()
         path = doc.get_path()
@@ -402,6 +410,21 @@ class Application(Screen):
         r1 = wr.intersection(r1)
         r2 = wr.intersection(r2)
         return r1 if r1.area() > r2.area() else r2
+
+    def handle_definition(self, msg):
+        logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
+        if 'result' in msg:
+            result = msg['result']
+            if len(result) > 0:
+                result = result[0]
+                if 'uri' in result and 'range' in result:
+                    uri: str = result['uri']
+                    if uri.startswith('file://'):
+                        path = uri[7:]
+                        pos = result['range']['start']
+                        row = pos['line']
+                        col = pos['character']
+                        self.open_file(path, row, col)
 
     def handle_suggestions(self, msg):
         logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
@@ -490,6 +513,9 @@ class Application(Screen):
     def draw_status_bar(self):
         self.move((0, self.height() - 1))
         self.write('\u2592' * (self.width() - 1), 0)
+
+    def action_goto_definition(self):
+        self.goto_definition()
 
     def action_suggestions(self):
         self.get_suggestions()

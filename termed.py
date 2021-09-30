@@ -12,6 +12,7 @@ from screen import Screen
 from wm import WindowManager
 from utils import *
 from plugin import *
+from plugins.output.output_plugin import OutputPlugin
 import config
 import traceback
 from focus import FocusTarget
@@ -24,6 +25,7 @@ from dialogs.find_dialog import FindDialog
 from dialogs.plugins_dialog import PluginsDialog
 from dialogs.wlist import ListWidget
 from lspclient.client import LSPClient
+from data_types import *
 
 
 class Application(Screen):
@@ -33,7 +35,7 @@ class Application(Screen):
         self.menu_bar = Menu('')
         self.shortcuts = {}
         self.main_view: View = None
-        self.output_view: View = None
+        self.output_view: OutputPlugin = None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
@@ -42,7 +44,12 @@ class Application(Screen):
         self.modified = True
         self.active_plugins: Dict[str, Plugin] = {}
         self._root = config.work_dir
-        self.lsp = LSPClient(self._root)
+        self._last_key = ''
+        self._get_new_suggestions = False
+        try:
+            self.lsp = LSPClient(self._root)
+        except FileNotFoundError:
+            self.lsp = None
         FocusTarget.add(self)
         # noinspection PyTypeChecker
         self._completion_list: ListWidget = None
@@ -52,7 +59,8 @@ class Application(Screen):
         open_docs = self.main_view.get_all_open_tabs()
         config.local_set_value('open_docs', open_docs)
         super().close()
-        self.lsp.shutdown()
+        if self.lsp is not None:
+            self.lsp.shutdown()
         for plugin_name in self.active_plugins:
             self.active_plugins[plugin_name].shutdown()
 
@@ -88,6 +96,8 @@ class Application(Screen):
         self.handle_coloring(msg)
 
     def handle_coloring(self, msg):
+        if self.lsp is None:
+            return
         if 'error' in msg:
             logger.logwrite(msg['error'])
             return
@@ -137,8 +147,9 @@ class Application(Screen):
                 else:
                     return False
             paths.append(doc.get_path())
-        for path in paths:
-            self.lsp.close_source_file(path)
+        if self.lsp is not None:
+            for path in paths:
+                self.lsp.close_source_file(path)
         return True
 
     #    def action_plugin_test(self):
@@ -184,7 +195,8 @@ class Application(Screen):
     def open_file(self, path, row=-1, col=-1):
         try:
             self.main_view.open_tab(Document(path, self.main_view))
-            self.lsp.open_source_file(path)
+            if self.lsp is not None:
+                self.lsp.open_source_file(path)
             self.set_focus(self.main_view)
             if row >= 0 and col >= 0:
                 row = min(row, self.main_view.get_doc().size() - 1)
@@ -298,10 +310,11 @@ class Application(Screen):
         if self.terminating:
             return False
         key = self.getkey()
+        self._last_key = ''
         if key is None:
             self.on_no_input()
             return True
-        if key == 'KEY_F(12)':
+        if key == 'KEY_F(36)':
             return False
         if self.process_shortcuts(key):
             return True
@@ -313,9 +326,11 @@ class Application(Screen):
                 self.on_action(action)
             else:
                 if hasattr(self.focus, 'process_key'):
+                    self._last_key = key
+                    self._get_new_suggestions = False
                     self.focus.process_key(key)
-                    if key == '.' and hasattr(self.focus, 'get_doc'):
-                        self.get_suggestions()
+                    if self._get_new_suggestions:
+                        self.post_modify()
                     # logger.logwrite(f'key: {key}')
         return True
 
@@ -324,21 +339,39 @@ class Application(Screen):
             doc = self.main_view.get_doc()
             path = doc.get_path()
             if os.path.isfile(path):
-                self.lsp.request_coloring(path, '', self.handle_full_coloring)
+                if self.lsp is not None:
+                    self.lsp.request_coloring(path, '', self.handle_full_coloring)
             self.modified = False
 
     def on_modify(self, doc: Document, row: int):
         path = doc.get_path()
         self.modified = True
+        self._get_new_suggestions = True
         if self._completion_list:
             self.update_completion_list()
-        if self.lsp.is_open_file(path):
+            self._get_new_suggestions = False
+        if self.lsp is not None and self.lsp.is_open_file(path):
             if row < 0:
                 self.lsp.modify_source_file(path, self.focus.get_doc().get_text(True))
                 # self.lsp.request_coloring(path, '', self.handle_full_coloring)
             else:
                 self.lsp.modify_source_line(path, row, doc.get_row(row).get_logical_text())
-                # self.lsp.request_coloring(path, doc.get_last_coloring_id(), self.handle_row_coloring)
+
+    def post_modify(self):
+        if hasattr(self.focus, 'get_doc'):
+            if self._completion_list is None and self._last_key.isalnum():
+                self.get_suggestions()
+            elif self._last_key == '.':
+                self.get_suggestions()
+            else:
+                self.close_suggestions()
+        else:
+            self.close_suggestions()
+        # self.lsp.request_coloring(path, doc.get_last_coloring_id(), self.handle_row_coloring)
+
+    def close_suggestions(self):
+        self._completion_list = None
+        self._completion_items = None
 
     def update_completion_list(self):
         word, _ = self.main_view.get_recent_word()
@@ -350,11 +383,19 @@ class Application(Screen):
             else:
                 self._completion_list.add_item(name)
 
+    def goto_definition(self):
+        doc: Document = self.focus.get_doc()
+        path = doc.get_path()
+        if self.lsp is not None and self.lsp.is_open_file(path):
+            cursor = self.focus.get_cursor()
+            col, row = cursor.x, cursor.y
+            self.lsp.request_definition(path, row, col, self.handle_definition)
+
     def get_suggestions(self):
         doc: Document = self.focus.get_doc()
         path = doc.get_path()
-        if self.lsp.is_open_file(path):
-            self.lsp.modify_source_file(path, doc.get_text(True))
+        if self.lsp is not None and self.lsp.is_open_file(path):
+            # self.lsp.modify_source_file(path, doc.get_text(True))
             cursor = self.focus.get_cursor()
             col, row = cursor.x, cursor.y
             self.lsp.request_completion(path, row, col, self.handle_suggestions)
@@ -370,6 +411,21 @@ class Application(Screen):
         r2 = wr.intersection(r2)
         return r1 if r1.area() > r2.area() else r2
 
+    def handle_definition(self, msg):
+        logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
+        if 'result' in msg:
+            result = msg['result']
+            if len(result) > 0:
+                result = result[0]
+                if 'uri' in result and 'range' in result:
+                    uri: str = result['uri']
+                    if uri.startswith('file://'):
+                        path = uri[7:]
+                        pos = result['range']['start']
+                        row = pos['line']
+                        col = pos['character']
+                        self.open_file(path, row, col)
+
     def handle_suggestions(self, msg):
         logger.logwrite(json.dumps(msg, indent=4, sort_keys=True))
         if 'result' in msg and 'items' in msg['result']:
@@ -378,21 +434,33 @@ class Application(Screen):
             self._completion_list.listen('enter', self._use_suggestion)
             items = msg['result']['items']
             self._completion_items = defaultdict(list)
+            scored_names = []
             for item in items:
-                self._completion_items[item['filterText']].append(item['label'])
-            for name in sorted(self._completion_items.keys()):
-                self._completion_list.add_item(name)
+                name = item['filterText']
+                signature = item['label']
+                score = item['score']
+                if score >= 1:
+                    c = CompletionItem(name, signature, score)
+                    self._completion_items[name].append(c)
+                    scored_names.append((score, name))
+            if len(self._completion_items) == 0:
+                self._completion_items = defaultdict(list)
+            else:
+                names = [pair[1] for pair in sorted(scored_names, key=lambda pair: pair[0], reverse=True)]
+                for name in names:
+                    self._completion_list.add_item(name)
 
     def _use_suggestion(self):
         if self._completion_list is None:
             return
         selection, _ = self._completion_list.get_selection()
         logger.logwrite(f'Selected: "{selection}"')
-        labels = self._completion_items.get(selection)
+        items = self._completion_items.get(selection)
         self._completion_list = None
         self.main_view.complete(selection)
         self.output_view.clear()
-        for label in labels:
+        for item in items:
+            label = item.signature
             if '(' in label:
                 self.output_view.add_text(label)
 
@@ -445,6 +513,9 @@ class Application(Screen):
     def draw_status_bar(self):
         self.move((0, self.height() - 1))
         self.write('\u2592' * (self.width() - 1), 0)
+
+    def action_goto_definition(self):
+        self.goto_definition()
 
     def action_suggestions(self):
         self.get_suggestions()

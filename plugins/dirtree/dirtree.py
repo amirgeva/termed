@@ -252,3 +252,10 @@ class DirTreePlugin(WindowPlugin):
         bar = Menu('')
         fill_menu(bar, desc)
         self.set_menu(bar)
+
+    def on_click(self, p: Point):
+        self._set_cur_y(p.y + self._offset - 1)
+
+    def on_double_click(self, p: Point):
+        self._set_cur_y(p.y + self._offset - 1)
+        self.action_enter()

@@ -1,4 +1,5 @@
 import typing
+import os
 import re
 from collections import OrderedDict
 from cursor import Cursor
@@ -355,12 +356,21 @@ class View(FocusTarget):
     def _render_tabs(self):
         if self._window.is_border():
             titles = []
+            start_index = 0
             for path in self._tabs:
                 tab = self._tabs.get(path)
                 tab_doc = tab.get('_doc')
-                tab_title = tab_doc.get_filename() + (' *' if tab_doc.is_modified() else '')
-                color = Color.BORDER_HIGHLIGHT if path == self._current_tab else Color.BORDER
-                titles.append((tab_title, color))
+                mod = ' *' if tab_doc.is_modified() else ''
+                tab_title = tab_doc.get_filename()
+                color = Color.BORDER
+                if path == self._current_tab:
+                    color = Color.BORDER_HIGHLIGHT
+                    start_index = len(titles)
+                    if path:
+                        tab_title = os.path.relpath(path, config.work_dir)
+                titles.append((tab_title + mod, color))
+            if start_index > 0:
+                titles = titles[start_index:] + titles[0:start_index]
             x = 2
             i = 0
             while i < len(titles):
@@ -368,6 +378,10 @@ class View(FocusTarget):
                     self._window.draw_top_frame_text(x, titles[i][0], titles[i][1])
                     x += 3 + len(titles[i][0])
                 i += 1
+
+    @staticmethod
+    def on_mouse(eid, x, y, button):
+        return False
 
     def render(self):
         self._window.set_footnote(0, f'{self._cursor.x + 1},{self._cursor.y + 1}')

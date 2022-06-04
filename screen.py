@@ -5,6 +5,7 @@ from builtins import staticmethod
 import config
 from base import Base
 from geom import Rect, Point
+
 os.environ.setdefault('ESCDELAY', '25')
 import curses
 
@@ -17,15 +18,18 @@ class Screen(Base):
         super().__init__()
         # if 'TERM' not in os.environ:
         #     os.environ['TERM']='xterm-256color'
-        self.scr = curses.initscr()
+        self._scr = curses.initscr()
+        curses.flushinp()
         curses.noecho()
         curses.raw()
-        self.scr.notimeout(0)
-        self.scr.timeout(30)
-        self.scr.keypad(True)
-        mx = self.scr.getmaxyx()
-        self.size = mx[1], mx[0]
-        self.rect = Rect(0, 0, self.size[0], self.size[1])
+        self._mouse_callback = None
+        self._scr.notimeout(False)
+        self._scr.timeout(30)
+        self._scr.keypad(True)
+        curses.mousemask(curses.ALL_MOUSE_EVENTS | curses.REPORT_MOUSE_POSITION)
+        mx = self._scr.getmaxyx()
+        self._size = mx[1], mx[0]
+        self._rect = Rect(0, 0, self._size[0], self._size[1])
         curses.start_color()
         # curses.use_default_colors()
         self._color_names = [
@@ -50,11 +54,11 @@ class Screen(Base):
             curses.init_pair(i, config.get_int(f'fg{i}', random.randint(1, 31)),
                              config.get_int(f'bg{i}', 0))
             i += 1
-        self.boxes = ['\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b',
-                      '\u2554\u2550\u2557\u2551 \u2551\u255a\u2550\u255d']
-        self.tees = ['\u2533\u2523\u252b\u253b\u254b', '\u2566\u2560\u2563\u2569\u256c']
+        self._boxes = ['\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b',
+                       '\u2554\u2550\u2557\u2551 \u2551\u255a\u2550\u255d']
+        self._tees = ['\u2533\u2523\u252b\u253b\u254b', '\u2566\u2560\u2563\u2569\u256c']
         sys.stdout.write('\033]12;yellow\007')
-        self.dbg = None  # open('screen.log', 'w')
+        self.dbg = None  # open('/tmp/screen.log', 'w')
 
     @staticmethod
     def update_color(color):
@@ -68,31 +72,34 @@ class Screen(Base):
     def query_colors(pair):
         return curses.pair_content(pair)
 
+    def set_mouse_callback(self, cb):
+        self._mouse_callback = cb
+
     def width(self):
-        return self.size[0]
+        return self._size[0]
 
     def height(self):
-        return self.size[1]
+        return self._size[1]
 
     def move(self, pos):
         if not isinstance(pos, Point):
             pos = Point(pos)
-        if self.rect.is_point_inside(pos):
-            self.scr.move(pos.y, pos.x)
+        if self._rect.is_point_inside(pos):
+            self._scr.move(pos.y, pos.x)
             return True
         return False
 
     def cursor_position(self):
-        return self.scr.getyx()
+        return self._scr.getyx()
 
     @staticmethod
     def cursor(state):
         curses.curs_set(1 if state else 0)
 
     def write(self, text, color):
-        if self.dbg is not None:
-            self.dbg.write(f'write("{text}",{color})\n')
-            self.dbg.flush()
+        # if self.dbg is not None:
+        #    self.dbg.write(f'write("{text}",{color})\n')
+        #    self.dbg.flush()
         attr = 0
         color = curses.color_pair(color | (attr & 0x7FFF))
         # color = 12
@@ -100,9 +107,9 @@ class Screen(Base):
             if isinstance(text, str):
                 for i in range(0, len(text)):
                     c = text[i]
-                    self.scr.addstr(c, color)
+                    self._scr.addstr(c, color)
             else:
-                self.scr.addch(text, color)
+                self._scr.addch(text, color)
         except curses.error:
             pass
 
@@ -138,28 +145,32 @@ class Screen(Base):
         self.write(tees[1], color)
 
     def draw_frame(self, rect: Rect, color: int, btype: int):
-        self.draw_frame_box(rect, color, self.boxes[btype])
+        self.draw_frame_box(rect, color, self._boxes[btype])
 
     def draw_frame_text(self, pos: Point, text: str, color: int, btype: int):
-        self.draw_frame_text_tees(pos, text, color, self.tees[btype])
+        self.draw_frame_text_tees(pos, text, color, self._tees[btype])
 
     def refresh(self):
-        self.scr.refresh()
+        self._scr.refresh()
 
     def flush(self):
         # curses.halfdelay(1)
         try:
-            return self.scr.getkey()
+            return self._scr.getkey()
         except curses.error:
             return 0
 
     def getkey(self):
         key = None
         try:
-            key = self.scr.getkey()
+            key = self._scr.getkey()
+            if key == "KEY_MOUSE":
+                eid, x, y, _, button = curses.getmouse()
+                if self._mouse_callback:
+                    self._mouse_callback(eid, x, y, button)
             if len(key) == 1 and ord(key[0]) == 27:
                 key = 'ESC'
-                next_key = self.scr.getkey()
+                next_key = self._scr.getkey()
                 key = "Alt+" + next_key
         except curses.error as e:
             if e.args[0] == 'no input':
@@ -170,7 +181,7 @@ class Screen(Base):
 
     def close(self):
         curses.nocbreak()
-        self.scr.keypad(0)
+        self._scr.keypad(0)
         curses.echo()
         curses.endwin()
-        self.scr = None
+        self._scr = None

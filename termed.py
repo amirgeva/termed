@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 from collections import defaultdict
 import json
 
@@ -29,13 +29,12 @@ from data_types import *
 
 
 class Application(Screen):
-    # noinspection PyTypeChecker
     def __init__(self):
         super().__init__()
         self.menu_bar = Menu('')
         self.shortcuts = {}
-        self.main_view: View = None
-        self.output_view: OutputPlugin = None
+        self.main_view: Optional[View] = None
+        self.output_view: Optional[OutputPlugin] = None
         self.views = []
         self._modal = False
         self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
@@ -51,9 +50,9 @@ class Application(Screen):
         except FileNotFoundError:
             self.lsp = None
         FocusTarget.add(self)
-        # noinspection PyTypeChecker
-        self._completion_list: ListWidget = None
+        self._completion_list: Optional[ListWidget] = None
         self._completion_items: Dict[str, List[str]] = defaultdict(list)
+        self.set_mouse_callback(self.on_mouse)
 
     def close(self):
         open_docs = self.main_view.get_all_open_tabs()
@@ -63,6 +62,14 @@ class Application(Screen):
             self.lsp.shutdown()
         for plugin_name in self.active_plugins:
             self.active_plugins[plugin_name].shutdown()
+
+    def on_mouse(self,eid,x,y,button):
+        if self.main_view:
+            if self.main_view.on_mouse(eid,x,y,button):
+                return
+        for plugin_name in self.active_plugins:
+            if self.active_plugins[plugin_name].on_mouse(eid,x,y,button):
+                return
 
     def get_plugin(self, name):
         if name in self.active_plugins:
@@ -349,7 +356,10 @@ class Application(Screen):
         self._get_new_suggestions = True
         if self._completion_list:
             self.update_completion_list()
-            self._get_new_suggestions = False
+            if self._last_key != '.':
+                self._get_new_suggestions = False
+                if not self._last_key.isalnum():
+                    self.close_suggestions()
         if self.lsp is not None and self.lsp.is_open_file(path):
             if row < 0:
                 self.lsp.modify_source_file(path, self.focus.get_doc().get_text(True))
@@ -359,9 +369,7 @@ class Application(Screen):
 
     def post_modify(self):
         if hasattr(self.focus, 'get_doc'):
-            if self._completion_list is None and self._last_key.isalnum():
-                self.get_suggestions()
-            elif self._last_key == '.':
+            if (self._completion_list is None and self._last_key.isalnum()) or self._last_key == '.':
                 self.get_suggestions()
             else:
                 self.close_suggestions()
@@ -401,7 +409,7 @@ class Application(Screen):
             self.lsp.request_completion(path, row, col, self.handle_suggestions)
 
     def tip_rect(self):
-        w, h = self.size
+        w, h = self._size
         wr = Rect(0, 0, w, h)
         tw, th = 40, 20
         y, x = self.cursor_position()

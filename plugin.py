@@ -20,6 +20,9 @@ class Plugin(FocusTarget):
     def render(self):
         pass
 
+    def on_mouse(self, eid, x, y, button):
+        return False
+
 
 class WindowPlugin(Plugin):
     def __init__(self, size: Point = Point(0, 5)):
@@ -47,3 +50,20 @@ class WindowPlugin(Plugin):
 
     def render(self):
         self._window.render()
+
+    def on_mouse(self, eid, x, y, button):
+        rect = self._window.get_rect()
+        if rect.contains(Point(x, y)):
+            p = Point(x, y) - rect.top_left()
+            if button == 8:
+                self.on_double_click(p)
+            if button == 4:
+                self.on_click(p)
+            return True
+        return False
+
+    def on_click(self, p: Point):
+        pass
+
+    def on_double_click(self, p: Point):
+        pass

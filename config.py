@@ -109,6 +109,14 @@ def save_cfg():
         cfg.write(f)
 
 
+Terminate = False
+
+
+def terminate_threads():
+    global Terminate
+    Terminate = True
+
+
 class Constants:
     def __init__(self):
         self.values = {'TABSIZE': get_int('TABSIZE', 4)}
@@ -144,6 +152,7 @@ if 'config' not in local_cfg:
     local_cfg['config'] = {}
 local_section = local_cfg['config']
 
+atexit.register(terminate_threads)
 atexit.register(save_cfg)
 
 const = Constants()

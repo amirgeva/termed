@@ -28,8 +28,20 @@ class OutputPlugin(WindowPlugin):
             self._view.action_enter()
             self._view.action_select_home()
             self._view.delete_selection()
-            self._view.render()
-            self._window.flush()
+        self._view.render()
+        self._window.flush()
+
+    def add_text_no_flush(self, text: str):
+        text = text.split('\n')
+        for line in text:
+            self._view.insert_text(line)
+            self._view.action_enter()
+            self._view.action_select_home()
+            self._view.delete_selection()
+
+    def flush(self):
+        self._view.render()
+        self._window.flush()
 
     def global_action_next_error(self):
         return self.action_next_error()

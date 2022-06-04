@@ -216,6 +216,9 @@ class DirTreePlugin(WindowPlugin):
             self._result_index = (self._result_index + 1) % len(self._search_results)
             self.show_search_result()
 
+    def action_build_type(self):
+        pass
+
     def process_key(self, key: str):
         if len(key) == 1:
             code = ord(key)
@@ -242,7 +245,8 @@ class DirTreePlugin(WindowPlugin):
     def create_menu(self):
         desc = [('&File', [('&Root Dir   Ctrl+O', self, 'select_root')
                            ]),
-                ('&Options', [('&General', self, 'general_settings')
+                ('&Options', [('&General', self, 'general_settings'),
+                              ('&Build Type', self, 'build_type')
                               ]),
                 ]
         bar = Menu('')

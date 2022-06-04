@@ -1,11 +1,12 @@
+import os
 import random
 import sys
-import curses
 from builtins import staticmethod
-
 import config
 from base import Base
 from geom import Rect, Point
+os.environ.setdefault('ESCDELAY', '25')
+import curses
 
 color_names = [
 ]
@@ -19,7 +20,8 @@ class Screen(Base):
         self.scr = curses.initscr()
         curses.noecho()
         curses.raw()
-        self.scr.timeout(1000)
+        self.scr.notimeout(0)
+        self.scr.timeout(30)
         self.scr.keypad(True)
         mx = self.scr.getmaxyx()
         self.size = mx[1], mx[0]
@@ -145,7 +147,7 @@ class Screen(Base):
         self.scr.refresh()
 
     def flush(self):
-        curses.halfdelay(1)
+        # curses.halfdelay(1)
         try:
             return self.scr.getkey()
         except curses.error:
@@ -154,14 +156,11 @@ class Screen(Base):
     def getkey(self):
         key = None
         try:
-            # self.scr.nodelay(False)
             key = self.scr.getkey()
             if len(key) == 1 and ord(key[0]) == 27:
                 key = 'ESC'
-                self.scr.nodelay(True)
-                key = "Alt+" + self.scr.getkey()
-                self.scr.nodelay(False)
-                self.scr.timeout(100)
+                next_key = self.scr.getkey()
+                key = "Alt+" + next_key
         except curses.error as e:
             if e.args[0] == 'no input':
                 return key

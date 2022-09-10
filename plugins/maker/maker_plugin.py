@@ -4,7 +4,9 @@ import config
 from plugin import Plugin
 from logger import logwrite
 import threading
-import time
+
+
+# import time
 
 
 class MakerPlugin(Plugin):
@@ -13,31 +15,37 @@ class MakerPlugin(Plugin):
         self._root = os.path.join(config.work_dir, 'build')
         self._offset = 0
         self._output_lines = []
-        self._output_thread = None
+        self._stdout_thread = None
+        self._stderr_thread = None
         self._terminate = False
 
-    def _output_loop(self):
+    def _output_loop(self, os):
         output = config.get_app().get_plugin('output')
-        while not self._terminate:
-            if len(self._output_lines) == 0:
-                time.sleep(0.1)
-            else:
-                output.add_text('\n'.join(self._output_lines))
-                self._output_lines = []
+        for line in os:
+            if self._terminate:
+                break
+            if isinstance(line, bytes):
+                line = line.decode('utf-8')
+            output.add_text(line.rstrip())
 
     def _execute(self, args):
         self._terminate = False
         output = config.get_app().get_plugin('output')
         output.clear()
-        if self._output_thread is None:
-            self._output_thread = threading.Thread(target=self._output_loop)
-            self._output_thread.start()
-        p = sp.Popen(args, stdout=sp.PIPE, stderr=sp.STDOUT, cwd=self._root)
-        for line in p.stdout:
-            text = line.decode('utf-8').rstrip()
-            self._output_lines.append(text)
-        self._terminate = True
-        self._output_thread = None
+        # if self._output_thread is None:
+        #    self._output_thread = threading.Thread(target=self._output_loop)
+        #    self._output_thread.start()
+        p = sp.Popen(args, stdout=sp.PIPE, stderr=sp.PIPE, cwd=self._root)
+        self._stdout_thread = threading.Thread(target=self._output_loop, args=(p.stdout,))
+        self._stderr_thread = threading.Thread(target=self._output_loop, args=(p.stderr,))
+        self._stdout_thread.start()
+        self._stderr_thread.start()
+        self._stdout_thread.join()
+        self._stderr_thread.join()
+        # self._terminate = True
+        # self._output_thread = None
+        self._stdout_thread = None
+        self._stderr_thread = None
 
     def global_action_configure(self):
         return self.action_configure()
@@ -60,6 +68,10 @@ class MakerPlugin(Plugin):
     def action_make(self):
         try:
             logwrite(f'Make in {self._root}')
-            self._execute(['make', '-j'])
+            target = config.local_get_value('target')
+            args = ['make', '-j']
+            if target:
+                args.append(target)
+            self._execute(args)
         except FileNotFoundError:
             self.action_configure()

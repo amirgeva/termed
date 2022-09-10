@@ -4,6 +4,7 @@ from typing import List
 
 class TreeNode:
     def __init__(self, name: str, is_dir: bool, parent):
+        self._bare_name: str = name
         self._name: str = name
         self._parent: TreeNode = parent
         if is_dir:
@@ -31,6 +32,9 @@ class TreeNode:
 
     def get_child(self, index: int):
         return self._children[index]
+
+    def get_bare_name(self) -> str:
+        return self._bare_name
 
     def get_name(self) -> str:
         return self._name
@@ -106,6 +110,8 @@ class TreeNode:
 
 def convert_node(node: TreeNode, subtree: dict):
     for name in sorted(subtree.keys()):
+        if name.startswith('.'):
+            continue
         value = subtree.get(name)
         if isinstance(value, dict):
             child = TreeNode(name, True, node)

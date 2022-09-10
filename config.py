@@ -6,6 +6,7 @@ from utils import ctrl
 from configparser import ConfigParser
 
 SHIFTED = 1
+END_OF_WORD = 2
 app = None
 
 
@@ -129,6 +130,7 @@ class Constants:
 
 
 home = os.environ['HOME']
+logging = False
 cfg_dir = os.path.join(home, '.termed')
 os.makedirs(cfg_dir, 0o755, True)
 cfg_path = os.path.join(cfg_dir, 'termed.ini')

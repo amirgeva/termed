@@ -731,6 +731,8 @@ class View(FocusTarget):
                            ('&Record Macro  Ctrl+R', app, 'toggle_macro_record'),
                            ('P&lay Macro    Ctrl+P', app, 'play_macro'),
                            ]),
+                ('&Debug', [('&Settings', app, 'debug_settings')
+                           ]),
                 ('&Options', [('&Colors', app, 'colors'),
                               ('&Editor', app, 'cfg_editor'),
                               ('&Key Mapping', app, 'keymap_dialog'),

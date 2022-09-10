@@ -220,6 +220,14 @@ class Application(Screen):
                 return True
         return False
 
+    def action_debug_settings(self):
+        target = config.local_get_value('target')
+        if target:
+            from dialogs.debug_dialog import DebugDialog
+            d = DebugDialog(target)
+            self.focus = d
+            self.event_loop(True)
+
     def action_find_replace(self):
         sel = self.main_view.get_selection_text()
         d = FindDialog()

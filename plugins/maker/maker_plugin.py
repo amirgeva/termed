@@ -57,7 +57,7 @@ class MakerPlugin(Plugin):
         except FileExistsError:
             pass
         try:
-            self._execute(['cmake', '..'])
+            self._execute(['cmake', '-DCMAKE_BUILD_TYPE=Debug', '-GNinja', '..'])
             self.action_make()
         except FileNotFoundError:
             output.add_text('Failed to configure')
@@ -69,7 +69,15 @@ class MakerPlugin(Plugin):
         try:
             logwrite(f'Make in {self._root}')
             target = config.local_get_value('target')
-            args = ['make', '-j']
+            if os.path.exists(os.path.join(self._root, 'Makefile')):
+                args = ['make', '-j']
+            elif os.path.exists(os.path.join(self._root, 'build.ninja')):
+                args = ['ninja']
+            else:
+                output = config.get_app().get_plugin('output')
+                output.clear()
+                output.add_text('No build system found')
+                return
             if target:
                 args.append(target)
             self._execute(args)

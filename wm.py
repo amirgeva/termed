@@ -1,30 +1,41 @@
-from typing import List
+from typing import List, Optional
 from geom import Rect, Point
 from window import Window
 
 
 class WindowManager:
-    windows: List[Window]
+    # _windows: List[Window]
 
     def __init__(self, rect: Rect):
         self.rect = rect
-        self.windows = []  # type: List[Window]
+        self._windows_set = set()
+        self._windows: List[Window] = []
+        self._hidden_windows = set()
+
+    def hide_window(self, w: Window):
+        self._hidden_windows.add(w)
+        self.reorg()
+
+    def show_window(self, w: Window):
+        self._hidden_windows.remove(w)
+        self.reorg()
 
     def add_window(self, w: Window):
-        try:
-            _ = self.windows.index(w)
-        except ValueError:
+        if w not in self._windows_set:
+            self._windows_set.add(w)
             if w.requested_size().x > 0:
-                self.windows.insert(1, w)
+                self._windows.insert(1, w)
             else:
-                self.windows.append(w)
+                self._windows.append(w)
             self.reorg()
 
     def remove_window(self, w: Window):
         try:
-            i = self.windows.index(w)
-            del self.windows[i]
+            self._windows_set.remove(w)
+            self._windows.remove(w)
             self.reorg()
+        except KeyError:
+            pass
         except ValueError:
             pass
 
@@ -34,8 +45,9 @@ class WindowManager:
         x = r0.pos.x + r0.width()
         y = r0.pos.y + r0.height()
         bottom_index = -1
-        for i in range(1, len(self.windows)):
-            w = self.windows[i]
+        windows = [w for w in self._windows if w not in self._hidden_windows]
+        for i in range(1, len(windows)):
+            w = windows[i]
             req = w.requested_size()
             if req.x > 0:
                 rects.append(Rect(x, 1, req.x, r0.height()))
@@ -64,4 +76,7 @@ class WindowManager:
             for i in range(bottom_index, len(rects)):
                 rects[i].move(Point(0, -reduction))
         for i in range(len(rects)):
-            self.windows[i].set_rect(rects[i])
+            windows[i].set_rect(rects[i])
+
+
+manager: Optional[WindowManager] = None

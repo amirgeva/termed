@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import sys
 import os
 from typing import List, Dict, Optional
 from collections import defaultdict
 import json
-
+import argh
 from cursor import Cursor
 from doc import Document
 from view import View
 from screen import Screen
-from wm import WindowManager
+import wm
 from utils import *
 from plugin import *
 from plugins.output.output_plugin import OutputPlugin
@@ -37,7 +36,8 @@ class Application(Screen):
         self.output_view: Optional[OutputPlugin] = None
         self.views = []
         self._modal = False
-        self.window_manager = WindowManager(Rect(0, 1, self.width(), self.height() - 2))
+        wm.manager = wm.WindowManager(Rect(0, 1, self.width(), self.height() - 2))
+        # self.window_manager =
         self.focus = None
         self.terminating = False
         self.modified = True
@@ -46,7 +46,7 @@ class Application(Screen):
         self._last_key = ''
         self._get_new_suggestions = False
         try:
-            self.lsp = LSPClient(self._root)
+            self.lsp = LSPClient(self._root, enable_logging=config.logging)
         except FileNotFoundError:
             self.lsp = None
         FocusTarget.add(self)
@@ -63,12 +63,12 @@ class Application(Screen):
         for plugin_name in self.active_plugins:
             self.active_plugins[plugin_name].shutdown()
 
-    def on_mouse(self,eid,x,y,button):
+    def on_mouse(self, eid, x, y, button):
         if self.main_view:
-            if self.main_view.on_mouse(eid,x,y,button):
+            if self.main_view.on_mouse(eid, x, y, button):
                 return
         for plugin_name in self.active_plugins:
-            if self.active_plugins[plugin_name].on_mouse(eid,x,y,button):
+            if self.active_plugins[plugin_name].on_mouse(eid, x, y, button):
                 return
 
     def get_plugin(self, name):
@@ -159,11 +159,6 @@ class Application(Screen):
                 self.lsp.close_source_file(path)
         return True
 
-    #    def action_plugin_test(self):
-    #        pl = WindowPlugin()
-    #        self.active_plugins.append(pl)
-    #        self.window_manager.add_window(pl.get_window())
-
     def action_file_exit(self):
         if isinstance(self.focus, View):
             if not self.save_before_close(self.focus.get_all_docs()):
@@ -226,12 +221,17 @@ class Application(Screen):
         return False
 
     def action_find_replace(self):
+        sel = self.main_view.get_selection_text()
         d = FindDialog()
+        if sel and len(sel.split('\n')) == 1:
+            d.set_text(sel)
         self.focus = d
         self.event_loop(True)
         r = d.get_result()
         if r and r != 'Close':
-            if isinstance(self.focus, View):
+            if d.options.action == 'Find' and d.options.all_files:
+                self.on_action('find_in_files')
+            elif isinstance(self.focus, View):
                 self.focus.find_replace(d.options)
 
     def action_plugins(self):
@@ -259,7 +259,7 @@ class Application(Screen):
                     new_active[name] = p
                     p.activate()
                     if isinstance(p, WindowPlugin):
-                        self.window_manager.add_window(p.get_window())
+                        wm.manager.add_window(p.get_window())
                         self.add_view(p)
         self.active_plugins = new_active
         self.output_view = self.get_plugin('output')
@@ -447,7 +447,7 @@ class Application(Screen):
                 name = item['filterText']
                 signature = item['label']
                 score = item['score']
-                if score >= 1:
+                if score > 0:
                     c = CompletionItem(name, signature, score)
                     self._completion_items[name].append(c)
                     scored_names.append((score, name))
@@ -465,6 +465,8 @@ class Application(Screen):
         logger.logwrite(f'Selected: "{selection}"')
         items = self._completion_items.get(selection)
         self._completion_list = None
+        if items is None:
+            return
         self.main_view.complete(selection)
         self.output_view.clear()
         for item in items:
@@ -554,17 +556,16 @@ def message_box(text):
     config.get_app().message_box(text)
 
 
-def main():
+def main(filename: str = '', enable_logs=False):
     input()
     app = Application()
     config.app = app
-    filename = ''
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
+    if enable_logs:
+        config.logging = True
     doc = Document(filename, None)
     doc.load(filename)
     w = Window(Point(app.width(), app.height()))
-    app.window_manager.add_window(w)
+    wm.manager.add_window(w)
     view = View(w, doc)
     app.set_main_view(view)
     app.reopen_session()
@@ -584,4 +585,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    argh.dispatch_command(main)

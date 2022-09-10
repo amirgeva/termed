@@ -20,11 +20,30 @@ class Window:
         else:
             self.rect = Rect(0, 0, 5, 5)
             self.size_preference = Point(5, 5)
+        self._hidden = False
         self._border = self.rect.height() > 2
         self._border_type = 0
         self._color = Color.BORDER
         self._title = ''
         self._footnotes = {}
+
+    def is_hidden(self):
+        return self._hidden
+
+    def hide(self):
+        import wm
+        wm.manager.hide_window(self)
+
+    def show(self):
+        import wm
+        wm.manager.show_window(self)
+
+    def global_to_local(self, x: int, y: int):
+        p = Point(x, y)
+        p = p - self.rect.top_left()
+        if self._border:
+            p = p - Point(1, 1)
+        return p.x, p.y
 
     def is_border(self) -> bool:
         return self._border

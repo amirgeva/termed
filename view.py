@@ -159,6 +159,14 @@ class View(FocusTarget):
     def place_cursor(self):
         self._window.set_cursor(self.doc2win(self._cursor))
 
+    def win2doc(self, x: int, y: int) -> Cursor:
+        cy = self._visual_offset.y + y
+        if cy >= self._doc.size():
+            return Cursor(0, self._doc.size() - 1)
+        line = self._doc.get_row(cy)
+        cx = x + self._visual_offset.x
+        return Cursor(line.get_logical_index(cx), cy)
+
     def doc2win(self, c: Cursor):
         if self._doc:
             y = c.y - self._visual_offset.y
@@ -320,6 +328,13 @@ class View(FocusTarget):
         x, y = self.doc2win(self._cursor)
         self._window.set_cursor(x, y)
 
+    def get_visual_line_text(self, y: int):
+        line_index = y + self._visual_offset.y
+        if line_index >= self._doc.size():
+            return ''
+        line = self._doc.get_row(line_index)
+        return line.get_logical_text()
+
     def draw_line(self, y: int):
         line_index = y + self._visual_offset.y
         if line_index >= self._doc.size():
@@ -379,11 +394,9 @@ class View(FocusTarget):
                     x += 3 + len(titles[i][0])
                 i += 1
 
-    @staticmethod
-    def on_mouse(eid, x, y, button):
-        return False
-
     def render(self):
+        if self._window.is_hidden():
+            return
         self._window.set_footnote(0, f'{self._cursor.x + 1},{self._cursor.y + 1}')
         self._window.render()
         self._render_tabs()
@@ -595,7 +608,7 @@ class View(FocusTarget):
             if tokens:
                 self.process_movement(Point(tokens[-1].span()[0] - x, 0), flags)
             elif y > 0:
-                if flags == config.SHIFTED:
+                if (flags & config.SHIFTED) == config.SHIFTED:
                     self.action_select_up()
                     self.action_select_end()
                 else:
@@ -613,13 +626,17 @@ class View(FocusTarget):
             tokens = list(re.finditer(word_pattern, text))
             default = True
             if tokens:
-                if tokens[0].span()[0] == 0:
-                    del tokens[0]
-                if tokens:
-                    self.process_movement(Point(tokens[0].span()[0], 0), flags)
+                if (flags & config.END_OF_WORD) == config.END_OF_WORD:
+                    self.process_movement(Point(tokens[0].span()[1], 0), flags)
                     default = False
+                else:
+                    if tokens[0].span()[0] == 0:
+                        del tokens[0]
+                    if tokens:
+                        self.process_movement(Point(tokens[0].span()[0], 0), flags)
+                        default = False
             if default and y < self._doc.size() - 1:
-                if flags == config.SHIFTED:
+                if (flags & config.SHIFTED) == config.SHIFTED:
                     self.action_select_down()
                     self.action_select_home()
                 else:
@@ -725,3 +742,26 @@ class View(FocusTarget):
         bar = Menu('')
         fill_menu(bar, desc)
         self.set_menu(bar)
+
+    def on_mouse(self, eid, x, y, button):
+        rect = self._window.get_rect()
+        if rect.contains(Point(x, y)):
+            p = Point(x, y) - rect.top_left()
+            if self._window.is_border():
+                p = p - Point(1, 1)
+            if button == 8:
+                self.on_double_click(p)
+            if button == 4:
+                self.on_click(p)
+            return True
+        return False
+
+    def on_click(self, p: Point):
+        config.get_app().set_focus(self)
+        self.set_cursor(self.win2doc(p.x, p.y))
+
+    def on_double_click(self, p: Point):
+        config.get_app().set_focus(self)
+        self.set_cursor(self.win2doc(p.x, p.y))
+        self.move_word_left(0)
+        self.move_word_right(config.SHIFTED | config.END_OF_WORD)

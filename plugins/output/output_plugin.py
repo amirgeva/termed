@@ -9,10 +9,11 @@ from cursor import Cursor
 
 class OutputPlugin(WindowPlugin):
     def __init__(self):
-        super().__init__(Point(0, 10))
+        super().__init__(Point(0, 16))
         self._offset = 0
         self._error_index = 0
         self._doc = Document('', None)
+        self._line_path_pattern = re.compile(r'^([/.\w]+):(\d+)')
         self._error_pattern = re.compile(r'^([/.\w]+):(\d+):(\d+): error')
         self._view = View(self.get_window(), self._doc)
 
@@ -77,3 +78,12 @@ class OutputPlugin(WindowPlugin):
     def on_focus(self):
         super().on_focus()
         config.get_app().cursor(True)
+
+    def on_double_click(self, p: Point):
+        text = self._view.get_visual_line_text(p.y)
+        m = re.search(self._line_path_pattern, text)
+        if m:
+            path = m.groups()[0]
+            row = int(m.groups()[1])
+            col = 1
+            config.get_app().open_file(path, row - 1, col - 1)

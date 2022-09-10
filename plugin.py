@@ -55,6 +55,8 @@ class WindowPlugin(Plugin):
         rect = self._window.get_rect()
         if rect.contains(Point(x, y)):
             p = Point(x, y) - rect.top_left()
+            if self._window.is_border():
+                p = p - Point(1, 1)
             if button == 8:
                 self.on_double_click(p)
             if button == 4:

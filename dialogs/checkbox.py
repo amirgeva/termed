@@ -14,7 +14,7 @@ class CheckboxWidget(Widget):
     def render(self):
         super().render()
         self._window.set_cursor(Point(0, 0))
-        color = Color.FOCUS if self.is_focus() else Color.TEXT
+        color = Color.TEXT_HIGHLIGHT if self.is_focus() else Color.TEXT
         self._window.text('[', Color.BORDER)
         self._window.text('X' if self._on else ' ', color)
         self._window.text(']', Color.BORDER)

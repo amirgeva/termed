@@ -16,6 +16,7 @@ class FindOptions:
         self.case = config.get_bool('find_case')
         self.whole = config.get_bool('find_whole')
         self.regex = config.get_bool('find_regex')
+        self.all_files = config.get_bool('find_all_files')
         self.regex_pattern = None
         self.update_regex()
 
@@ -37,6 +38,7 @@ class FindOptions:
         config.set_value('find_case', self.case)
         config.set_value('find_whole', self.whole)
         config.set_value('find_regex', self.regex)
+        config.set_value('find_all_files', self.all_files)
 
 
 class FindDialog(FormDialog):
@@ -60,19 +62,23 @@ class FindDialog(FormDialog):
         self._case = CheckboxWidget(self.subwin(2, 9, 3, 1), self.options.case)
         self._whole = CheckboxWidget(self.subwin(2, 10, 3, 1), self.options.whole)
         self._regex = CheckboxWidget(self.subwin(2, 11, 3, 1), self.options.regex)
+        self._all_files = CheckboxWidget(self.subwin(2, 12, 3, 1), self.options.all_files)
         self._case.listen('toggled', self.update_options)
         self._whole.listen('toggled', self.update_options)
         self._regex.listen('toggled', self.update_options)
+        self._all_files.listen('toggled', self.update_options)
 
         self.add_widget(TextWidget(self.subwin(6, 9, 20, 1), 'Case Sensitive'))
         self.add_widget(TextWidget(self.subwin(6, 10, 20, 1), 'Whole Word'))
         self.add_widget(TextWidget(self.subwin(6, 11, 20, 1), 'Regular Expressions'))
+        self.add_widget(TextWidget(self.subwin(6, 12, 20, 1), 'Find In Files'))
 
         self.add_widget(self._find_text)
         self.add_widget(self._replace_text)
         self.add_widget(self._case)
         self.add_widget(self._whole)
         self.add_widget(self._regex)
+        self.add_widget(self._all_files)
         self.set_focus(self._find_text)
 
     def close(self, result=None):
@@ -81,6 +87,9 @@ class FindDialog(FormDialog):
             if result != 'Close':
                 self.options.save()
         super().close(result)
+
+    def set_text(self, text: str):
+        self._find_text.set_text(text)
 
     def on_find(self):
         self.close('Find')
@@ -94,4 +103,5 @@ class FindDialog(FormDialog):
         self.options.case = self._case.get_state()
         self.options.whole = self._whole.get_state()
         self.options.regex = self._regex.get_state()
+        self.options.all_files = self._all_files.get_state()
         self.options.update_regex()

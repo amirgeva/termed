@@ -13,7 +13,7 @@ from window import Window
 from doc import Document
 from color import Color, type_colors
 from menus import Menu, fill_menu
-import pyperclip
+import clipboard
 
 word_pattern = re.compile(r'(\w+)')
 
@@ -690,19 +690,19 @@ class View(FocusTarget):
     def action_copy(self):
         if self._selection is not None:
             text = self.get_selection_text()
-            pyperclip.copy(text)
+            clipboard.copy(text)
 
     def action_cut(self):
         if self._selection is not None:
             text = self.get_selection_text()
-            pyperclip.copy(text)
+            clipboard.copy(text)
             self.delete_selection()
 
     def action_paste(self):
         self._pasting = True
         self._doc.start_compound()
         self.delete_selection()
-        text = pyperclip.paste()
+        text = clipboard.paste()
         self.insert_text(text)
         self._doc.stop_compound()
 

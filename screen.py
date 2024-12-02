@@ -5,6 +5,7 @@ from builtins import staticmethod
 import config
 from base import Base
 from geom import Rect, Point
+import _curses
 
 os.environ.setdefault('ESCDELAY', '25')
 import curses
@@ -38,22 +39,25 @@ class Screen(Base):
             'Red', 'Magenta', 'Pink', 'Orange', 'Salmon', 'Pink2', 'Yellow', 'Sun', 'White'
         ]
         i = 0
-        for r in range(0, 1001, 500):
-            for g in range(0, 1001, 500):
-                for b in range(0, 1001, 500):
-                    curses.init_color(i, r, g, b)
-                    i += 1
-        default_pairs = [
-            (26, 0), (0, 8), (21, 0), (16, 0), (8, 0), (23, 0), (13, 0)
-        ]
-        i = 1
-        for pair in default_pairs:
-            curses.init_pair(i, config.get_int(f'fg{i}', pair[0]), config.get_int(f'bg{i}', pair[1]))
-            i = i + 1
-        while i < 32:
-            curses.init_pair(i, config.get_int(f'fg{i}', random.randint(1, 31)),
-                             config.get_int(f'bg{i}', 0))
-            i += 1
+        try:
+            for r in range(0, 1001, 500):
+                for g in range(0, 1001, 500):
+                    for b in range(0, 1001, 500):
+                        curses.init_color(i, r, g, b)
+                        i += 1
+            default_pairs = [
+                (26, 0), (0, 8), (21, 0), (16, 0), (8, 0), (23, 0), (13, 0)
+            ]
+            i = 1
+            for pair in default_pairs:
+                curses.init_pair(i, config.get_int(f'fg{i}', pair[0]), config.get_int(f'bg{i}', pair[1]))
+                i = i + 1
+            while i < 32:
+                curses.init_pair(i, config.get_int(f'fg{i}', random.randint(1, 31)),
+                                 config.get_int(f'bg{i}', 0))
+                i += 1
+        except _curses.error:
+            pass
         self._boxes = ['\u250f\u2501\u2513\u2503 \u2503\u2517\u2501\u251b',
                        '\u2554\u2550\u2557\u2551 \u2551\u255a\u2550\u255d']
         self._tees = ['\u2533\u2523\u252b\u253b\u254b', '\u2566\u2560\u2563\u2569\u256c']
